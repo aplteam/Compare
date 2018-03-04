@@ -1,0 +1,218 @@
+:Class WinReg
+⍝ Offers shared methods useful to deal with the Windows Registry.
+⍝ Note that the Window Registry contains data saved under a kind _
+⍝ of "path". Such a path consists of:
+⍝ * A so-called "Main Key" like HKEY_CURRENT_USER (or short HKCU)
+⍝ * A so called sub-key which is displayed by RegEdt32 as a folder like _
+⍝ "HKEY_CURRENT_USER\Software\Dyalog\Dyalog APL/W 12.0"
+⍝ * A so-called value like "maxws"
+⍝ These terms might look strange but they are used by this class for _
+⍝ the sake of consistency.
+⍝ This class is also able to read and write default values of a sub-key. _
+⍝ For that you have to add a "\" to the end of the sub-key.
+⍝ Author: Kai Jaeger ⋄ APL Team Ltd
+    ⎕ML←3
+    ⎕IO←1
+
+    ∇ R←Version
+:Access Public Shared
+    R←'WinReg' '1.0' '2008-07-26'
+    ∇
+
+    ∇ r←{default}GetString path;handle;rc;str;REG_SZ;subKey;value;multiByte;Value;∆RegQueryValueEx
+:Access Public Shared
+    ⍝ Returns the data as a string saved as "path" in the Registry, or "Default"
+      default←{0<⎕NC ⍵:⍎⍵ ⋄ ''}'default'
+    r←default
+    multiByte←1+80=⎕DR'A' ⍝ 2 in Unicode System
+    :If '\'=¯1↑path
+    subKey←path
+    Value←''
+:Else
+    (subKey Value)←Split path
+    :EndIf
+    subKey←CheckPath subKey
+    :If DoesKeyExist subKey
+    handle←OpenKey subKey
+    REG_SZ←1 ⍝ String data type
+    '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I =I >0T =I4'
+    (rc str)←1 0 1/3↑∆RegQueryValueEx handle Value 0 REG_SZ,multiByte×255 255
+    :If rc=0
+    r←str
+    :EndIf
+    Close handle
+    :EndIf
+    ∇
+    ∇ r←{default}GetValue path;handle;rc;value;∆RegQueryValueEx;subKey;Value;data
+:Access Public Shared
+    ⍝ Returns the data as a numeric value saved as "path" in the Registry, or "Default"
+      default←{0<⎕NC ⍵:⍎⍵ ⋄ 0}'default'
+    r←default
+    (subKey Value)←Split path
+    subKey←CheckPath subKey
+    :If DoesKeyExist subKey
+    handle←OpenKey subKey
+    '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I I >I4 =I4'
+    (rc data)←2↑∆RegQueryValueEx handle Value 0 0 0 4
+    :If rc=0
+    r←data
+    :EndIf
+    Close handle
+    :EndIf
+    ∇
+∇ PutString(path data);subKey;string;RegSetValueExA;REG_SZ;∆RegSetValueEx;multiByte;handle;value;trash∆RegSetValueEx;trash
+:Access Public Shared
+    ⍝ Stores "data" under "path". If "path" ends with a "\" char, "data" _
+    ⍝ is saved as the default value of "path".
+    multiByte←1+80=⎕DR'A' ⍝ 2 in Unicode System
+    (subKey value)←Split path
+    'Invalid "value"'⎕SIGNAL 11/⍨' '≠1↑0⍴value
+    subKey←CheckPath subKey
+    handle←OpenKey subKey
+    data←,data
+    REG_SZ←1 ⍝ String data type
+    '∆RegSetValueEx'⎕NA'I ADVAPI32.dll.C32|RegSetValueEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I I <0T I4'
+    trash←∆RegSetValueEx handle value 0 REG_SZ data(multiByte×1+⊃⍴data)
+    Close handle
+∇
+∇ PutValue(path data);subKey;RegSetValueExA;REG_DWORD;∆RegSetValueEx;handle;value;trash
+:Access Public Shared
+    ⍝ Stores "data" under "path". If "path" ends with a "\" char, _
+    ⍝ "data" is saved as a default value of "path"
+    (subKey value)←Split path
+    subKey←CheckPath subKey
+    handle←OpenKey subKey
+    REG_DWORD←4 ⍝ Data type is 32-bit word
+    '∆RegSetValueEx'⎕NA'I ADVAPI32.dll.C32|RegSetValueEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I I <I4 I4'
+    trash←∆RegSetValueEx handle value 0 REG_DWORD data 4
+    Close handle
+∇
+    ∇ {r}←DeleteSubKey path;handle;RegDeleteKeyA;HKEY;subKey;∆RegDeleteKey
+:Access Public Shared
+      ⍝ Deletes a subkey "path", even if this subkeys holds values
+    path←CheckPath path
+    path,←'\'/⍨'\'≠¯1↑path
+    (HKEY subKey)←{a←¯1+⍵⍳'\' ⋄ (a↑⍵)(1↓a↓⍵)}path
+    handle←Get_HKEY_From HKEY
+    '∆RegDeleteKey'⎕NA'I ADVAPI32.dll.C32|RegDeleteKey',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T[]'
+    r←∆RegDeleteKey handle subKey
+    Close handle
+    ∇
+    ∇ {r}←DeleteValue path;RegDeleteValueA;handle;∆RegDeleteValue;value;subKey
+:Access Public Shared
+      ⍝ Delete a value from a subKey in the Windows Registry
+    (subKey value)←Split path
+    subKey←CheckPath subKey
+    handle←OpenKey subKey
+    '∆RegDeleteValue'⎕NA'I ADVAPI32.dll.C32|RegDeleteValue',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T[]'
+    r←∆RegDeleteValue handle value
+    Close handle
+    ∇
+    ∇ bool←DoesKeyExist path;HKEY;KEY_READ;handle;subKey;∆RegOpenKeyEx;RegCloseKey;trash
+:Access Public Shared
+    ⍝ Checks if a Registry key "path" exists as a subkey of (by default) _
+    ⍝ HKEY_CURRENT_USER or the HKEY specified in "path".
+    path←CheckPath path
+    (HKEY subKey)←{a←⍵⍳'\' ⋄ ((a-1)↑⍵)(a↓⍵)}path
+    HKEY←Get_HKEY_From HKEY
+    KEY_READ←25           ⍝ HEX 0x00000019
+    '∆RegOpenKeyEx'⎕NA'I ADVAPI32.dll.C32|RegOpenKeyEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I I >U'
+    (bool handle)←∆RegOpenKeyEx HKEY subKey 0 KEY_READ 0
+    :If bool←bool=0
+    ⎕NA'I ADVAPI32.dll.C32|RegCloseKey U'
+    trash←RegCloseKey handle
+    :EndIf
+    ∇
+    ∇ bool←DoesValueExist path;HKEY;KEY_READ;handle;subKey;value;REG_SZ;∆RegOpenKeyEx;∆RegQueryValueEx;rc
+:Access Public Shared
+      ⍝ Checks if a value exists in the Registry as "path" in (by default) _
+      ⍝ HKEY_CURRENT_USER or the HKEY specified in "path".
+    path←CheckPath path
+    (HKEY subKey)←{a←⍵⍳'\' ⋄ ((a-1)↑⍵)(a↓⍵)}path
+    HKEY←Get_HKEY_From HKEY
+    (subKey value)←Split subKey
+    subKey←¯1↓subKey
+    KEY_READ←25           ⍝ HEX 0x00000019
+    '∆RegOpenKeyEx'⎕NA'I ADVAPI32.dll.C32|RegOpenKeyEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I I >U'
+    (bool handle)←∆RegOpenKeyEx HKEY subKey 0 KEY_READ 0
+    :If bool←''⍴bool=0
+    REG_SZ←1 ⍝ String data type
+    '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I =I >0T =I4'
+    rc←1⊃∆RegQueryValueEx handle value 0 REG_SZ,255 255
+    bool←''⍴rc=0
+    :EndIf
+    ⎕NA'I ADVAPI32.dll.C32|RegCloseKey U'
+    trash←RegCloseKey handle
+    ∇
+    ⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝ Private stuff ⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝,
+    ∇ HKEY←Get_HKEY_From Type
+      Type←{0∊⍴⍵:'HKEY_CURRENT_USER' ⋄ ⍵}Type
+    :If ' '=1↑0⍴Type
+    :Select Type
+:Case 'HKEY_CLASSES_ROOT'
+    HKEY←2147483648             ⍝ HEX 0x80000000
+:Case 'HKEY_CURRENT_USER'
+    HKEY←2147483649             ⍝ HEX 0x80000001
+:Case 'HKEY_LOCAL_MACHINE'
+    HKEY←2147483650             ⍝ HEX 0x80000002
+:Case 'HKEY_USERS'
+    HKEY←2147483651             ⍝ HEX 0x80000003
+:Case 'HKEY_PERFORMANCE_DATA'
+    HKEY←2147483652             ⍝ HEX 0x80000004
+:Case 'HKEY_CURRENT_CONFIG'
+    HKEY←2147483653             ⍝ HEX 0x80000005
+:Case 'HKEY_DYN_DATA'
+    HKEY←2147483654             ⍝ HEX 0x80000006
+:Else
+    'Invalid Keyword'⎕SIGNAL 11
+    :EndSelect
+      :Else
+HKEY←Type
+:EndIf
+    ∇
+    ∇ Close handle;RegCloseKey;trash
+⎕NA'U ADVAPI32.dll.C32|RegCloseKey U'
+trash←RegCloseKey handle
+    ∇
+∇ handle←OpenKey path;KEY_ALL_ACCESS;HKEY;subKey;∆RegCreateKeyEx
+path←CheckPath path
+:If 'HKEY_'≡5↑path
+(HKEY subKey)←{a←⍵⍳'\' ⋄ ((a-1)↑⍵)(a↓⍵)}path
+HKEY←Get_HKEY_From HKEY
+ :Else
+HKEY←2147483649                  ⍝ HKEY_CURRENT_USER
+:EndIf
+KEY_ALL_ACCESS←983103                ⍝ HEX 0xF003F=All rights!
+ ⍝'∆RegOpenKeyEx'⎕NA'I ADVAPI32.dll.C32|RegOpenKeyEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I <0T I I I >U >U'
+'∆RegCreateKeyEx'⎕NA'I ADVAPI32.dll.C32|RegCreateKeyEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U <0T I <0T I I I >U >U'
+handle←⊃2⊃∆RegCreateKeyEx HKEY subKey 0 '' 0 KEY_ALL_ACCESS 0 0 0
+∇
+    ∇ path←CheckPath path;buffer;path2;HKEY
+   ⍝ Check the path, replace shortcuts by proper names and establish default if needed
+:If 'HK'≡2↑path
+(HKEY path2)←{⍵{((¯1+⍵)↑⍺)(⍵↓⍺)}⍵⍳'\'}path
+:If 'HKEY_'{⍺≢⍵↑⍨⍴⍺}HKEY
+:Select HKEY
+              :Case 'HKCU'
+path←'HKEY_CURRENT_USER\',path2
+              :Case 'HKCR'
+path←'HKEY_CLASSES_ROOT\',path2
+              :Case 'HKLM'
+path←'HKEY_LOCAL_MACHINE\',path2
+              :Case 'HKU'
+path←'HKEY_USERS\',path2
+              :Else
+11 ⎕SIGNAL⍨'Invalid Registry key: "',HKEY,'"'
+:EndSelect
+          :EndIf
+      :Else
+          path←'HKEY_CURRENT_USER\',path
+      :EndIf
+    ∇
+      Split←{~'\'∊⍵:''⍵
+          '\'=¯1↑⍵:(¯1↓⍵)''
+          ⍵⊂⍨1+⌽(⍴⍵)↑1⍴⍨¯1+'\'⍳⍨⌽⍵}
+      Make←{
+          0=⎕NC ⍵:⍺
+          ⍎⍵}
+:EndClass ⍝ WinReg

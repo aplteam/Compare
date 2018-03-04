@@ -1,0 +1,7 @@
+ CopyTestData path
+ '#.Old'#.⎕CY path,'TestData'
+ '#.New'#.⎕CY path,'TestData'
+ '#.Container1'#.⎕CY path,'TestData'
+ '#.Container2'#.⎕CY path,'TestData'
+ '#.DisplayFormatProblem'#.⎕CY path,'TestData'
+⍝ Done

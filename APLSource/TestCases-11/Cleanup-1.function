@@ -1,0 +1,4 @@
+ Cleanup
+ #.⎕EX'#.CompareTestCases'
+ #.FilesAndDirs.RmDir'..\CompareTestCases'
+ ⎕EX¨'#.Old' '#.New' '#.Container1' '#.Container2'

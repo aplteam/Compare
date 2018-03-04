@@ -1,0 +1,23 @@
+ R←Test_Merge_004(stopFlag batchFlag);⎕TRAP;rf1;rf2;∆;buffer
+⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in both, [1] & [2] and "dropFromRubbish"
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+ R←∆Failed
+
+⍝⍝⍝ Preperations
+ #.⎕SHADOW¨'Rubbish1' 'Rubbish2'
+ rf1←⍎'Rubbish1'#.⎕NS''                     ⍝ The two things...
+ rf2←⍎'Rubbish2'#.⎕NS''                     ⍝ ...to be compared
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 1')('Posn'(30 40))('Size'(100 200))
+ 'MyForm'rf2.⎕WC ∆                          ⍝ Create a GUI instance
+ rf2.MyForm.⎕FX'r←AttachedToMyForm' 'r←''Firlefanz''' ⍝ Create code in attached namespace
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 2')('Posn'(30 40))('Size'(100 200))
+ 'MyFormOK'rf2.⎕WC ∆                        ⍝ No attached code, to be reported just as Instance
+
+⍝⍝⍝ Processing....
+ buffer←¯1 ##.Compare.Merge rf1 rf2(⍴'#.Rubbish1.')
+ →∆TidyUp×PassesIf 0 5≡⊃∘⍴¨buffer
+
+ R←∆OK
+
+∆TidyUp:
+ rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

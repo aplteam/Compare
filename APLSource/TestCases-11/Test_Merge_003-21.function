@@ -1,0 +1,85 @@
+ R←Test_Merge_003(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6
+⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in [2] only.
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+ R←∆Failed
+
+ Isolate←{{⍵↑⍨+/∧\~':'∊¨⍵}(⍺⍳⊂⍵)↓⍺}
+ Match←{(∧/⍺∊⍵)∧(∧/⍵∊⍺)}
+
+⍝⍝⍝ Preperations
+ #.⎕SHADOW¨'Rubbish1' 'Rubbish2'
+ rf1←⍎'Rubbish1'#.⎕NS''                     ⍝ The two things to be compared
+
+ rf2←⍎'Rubbish2'#.⎕NS''                     ⍝
+ code←':Class Foo' ':EndClass'
+ rf2.⎕FIX code                              ⍝ We don't want to see this reported as ref
+ rf2.Foo.⎕FX'r←HelloAttachedToFoo' 'r←''World2''' ⍝ Populate the attached namespace of the class with a FNS
+ code←':Class FooNormal' '∇r←Hello3' 'r←''From within a class''' '∇' ':EndClass'
+ rf2.⎕FIX code                              ⍝ Not to be reported
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 1')('Posn'(30 40))('Size'(100 200))
+ 'MyForm'rf2.⎕WC ∆                          ⍝ Create a GUI instance
+ rf2.MyForm.⎕FX'r←AttachedToMyForm' 'r←''Firlefanz''' ⍝ Create code in attached namespace
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 2')('Posn'(30 40))('Size'(100 200))
+ 'MyFormOK'rf2.⎕WC ∆                        ⍝ No attached code, to be reported just as Instance
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 1')('Posn'(30 40))('Size'(100 200))('KeepOnClose' 1)
+ 'MyForm2'rf2.⎕WC ∆                         ⍝ Create a GUI instance but with KeepOnClose←1
+ rf2.MyForm2.⎕FX'r←AttachedToMyForm2' 'r←''World2'''   ⍝ Populate the attached namespace of the class with a FNS
+ code←':Interface IF1' '' ':EndInterface'
+ rf2.⎕FIX code                              ⍝ Interface; not to be reported anywhere
+ rf2.IF1.⎕FX'r←AttachedToIF1' 'r←⍬'         ⍝ Create code in attached namespace of the Interface
+ code←':Interface IF2' '' ':EndInterface'
+ rf2.⎕FIX code                              ⍝ Another Interface; not to be reported anywhere
+ rf2.MyLoggerInstance1←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A non-GUI instance
+ rf2.MyLoggerInstance2←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A non-GUI instance
+ 'TCPSocket0'rf2.⎕WC'TCPSocket'('LocalPort' 2001)     ⍝ TCP Socket instance
+
+⍝⍝⍝ Processing....
+⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯1 ##.Compare.Merge rf1 rf2
+
+⍝⍝⍝ Checking
+ rep←#.APLTreeUtils.dlb 2⊃buffer
+ →∆TidyUp×PassesIf~0∊⍴rep
+
+ expected1←,⊂'#.Rubbish2.MyForm2'
+ →∆TidyUp×PassesIf expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
+ expected2←,⊂'#.Rubbish2.MyForm'
+ →∆TidyUp×PassesIf expected2 Match rep Isolate'Instances with code in attached namespace:'
+ expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
+ →∆TidyUp×PassesIf expected3 Match rep Isolate'Class Instances:'
+ expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
+ →∆TidyUp×PassesIf expected4 Match rep Isolate'Other Instances:'
+ expected5←,⊂'#.Rubbish2.Foo'
+ →∆TidyUp×PassesIf expected5 Match rep Isolate'Classes with code in attached namespace:'
+ expected6←,⊂'#.Rubbish2.IF1'
+ →∆TidyUp×PassesIf expected6 Match rep Isolate'Interfaces with code in attached namespace:'
+ →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
+
+ ⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯1 0 ##.Compare.Merge rf1 rf2
+ ⍝ Same result only that namepsace references are not reported
+
+⍝⍝⍝ Checking
+ rep←2⊃buffer
+ →∆TidyUp×PassesIf~0∊⍴rep
+ rep←#.APLTreeUtils.dlb 2⊃buffer
+ →∆TidyUp×PassesIf~0∊⍴rep
+
+ expected1←,⊂'#.Rubbish2.MyForm2'
+ →∆TidyUp×PassesIf expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
+ expected2←,⊂'#.Rubbish2.MyForm'
+ →∆TidyUp×PassesIf expected2 Match rep Isolate'Instances with code in attached namespace:'
+ expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
+ →∆TidyUp×PassesIf expected3 Match rep Isolate'Class Instances:'
+ expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
+ →∆TidyUp×PassesIf expected4 Match rep Isolate'Other Instances:'
+ expected5←,⊂'#.Rubbish2.Foo'
+ →∆TidyUp×PassesIf expected5 Match rep Isolate'Classes with code in attached namespace:'
+ expected6←,⊂'#.Rubbish2.IF1'
+ →∆TidyUp×PassesIf expected6 Match rep Isolate'Interfaces with code in attached namespace:'
+ →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
+
+ R←∆OK
+
+∆TidyUp:
+ rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

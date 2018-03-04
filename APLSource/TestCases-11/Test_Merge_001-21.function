@@ -1,0 +1,141 @@
+ R←Test_Merge_001(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;rep2;rep1;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6;i;refToGui;bool
+⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in both, [1] & [2]
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+ R←∆Failed
+
+ Isolate←{{⍵↑⍨+/∧\~':'∊¨⍵}(⍺⍳⊂⍵)↓⍺}
+ Match←{(∧/⍺∊⍵)∧(∧/⍵∊⍺)}
+
+⍝⍝⍝ Preperations
+ #.⎕SHADOW¨'Rubbish1' 'Rubbish2'            ⍝ Keep them local
+ rf1←⍎'Rubbish1'#.⎕NS''                     ⍝ The two things to be compared
+ rf_←⍎'OrdinaryNamedNamespace'rf1.⎕NS''     ⍝ To be reported as empty only
+ rf1.RefToOrdinaryNamedNamespace←rf_        ⍝ To be reported when refsAreRubbish←1
+ rf1.MyLoggerInstance1←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A Class instance
+ rf1.RefToUnnamedNS1←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
+ rf1.RefToUnnamedNS2←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
+ 'Sub'rf1.RefToUnnamedNS2.⎕NS''             ⍝ Named sub-namespace in unnamed NS
+ rf1.RefToUnnamedNS2.CircularRef←rf1.RefToUnnamedNS2.Sub ⍝ Ref pointing downwards, creating a potential problem
+ 'SubNSWithCode'rf1.⎕NS''                   ⍝ We don't want to see this reported as rubbish: it's named & it contains sub-namespaces
+ rf1.SubNSWithCode.Sub1WithCode←⎕NS''       ⍝ To be reported when refsAreRubbish←1
+ rf1.SubNSWithCode.Sub1WithCode.⎕FX'r←Hello' 'r←''World'''
+ rf1.MyLoggerInstance2←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf1.SubNSWithCode.CodeSub2←⎕NS''           ⍝ To be reported when refsAreRubbish←1
+ rf1.SubNSWithCode.CodeSub2.⎕FIX':Class Test' '∇r←Hello' ':Access Public Shared' 'r←''World''' '∇' ':EndClass'
+ rf1.SubNSWithCode.Empty←⎕NS''              ⍝ To be reported when refsAreRubbish←1
+ rfa←⍎'ContainerA'rf1.⎕NS''                 ⍝ Ordinary non-empty namespace
+ rf1.ContainerA.⎕FX'r←ContainerAHello' 'r←''World'''
+ 'EmptyAndNamed1'rf1.ContainerA.⎕NS''       ⍝ Ordinary empty sub-namespace
+ rf1.RefToEmptyUnnamed1←rf1.ContainerA.⎕NS''⍝ To be reported when refsAreRubbish←1
+ 'ContainerA2'rfa.⎕NS''                     ⍝ Ordinary non-empty sub-namespace
+ rfa.ContainerA2.⎕FX'r←ContainerA2_Hello' 'r←''World'''
+ rfb←⍎'ContainerB'rf1.⎕NS''                 ⍝ Ordinary non-empty namespace
+ rf1.ContainerB.⎕FX'r←ContainerBHello' 'r←''World'''
+ 'EmptyAndNamed2'rf1.ContainerB.⎕NS''       ⍝ Ordinary empty sub-namespace
+ rf1.RefToEmptyUnnamed2←rf1.ContainerB.⎕NS''⍝ To be reported when refsAreRubbish←1
+ 'ContainerB2'rfb.⎕NS''                     ⍝ Ordinary non-empty sub-namespace
+ rfb.ContainerB2.⎕FX'r←ContainerB2_Hello' 'r←''World'''
+ rf1.MyLoggerInstance3←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf_←⍎'HoldSubNamespaces'rf1.⎕NS''          ⍝ Named & not empty, therefore not reported
+ 'Sub1Empty'rf_.⎕NS''                       ⍝ Named and empty
+ 'Sub2NonEmpty'rf_.⎕NS''                    ⍝ Named and not empty
+ rf_.Sub2NonEmpty.⎕FX'r←Sub2NonEmptyHello' 'r←''World'''
+
+ rf2←⍎'Rubbish2'#.⎕NS''                     ⍝
+ code←':Class Foo' ':EndClass'
+ rf2.⎕FIX code                              ⍝ We don't want to see this reported as ref
+ rf2.Foo.⎕FX'r←HelloAttachedToFoo' 'r←''World2''' ⍝ Populate the attached namespace of the class with a FNS
+ code←':Class FooNormal' '∇r←Hello3' 'r←''From within a class''' '∇' ':EndClass'
+ rf2.⎕FIX code                              ⍝ Not to be reported
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 1')('Posn'(30 40))('Size'(100 200))
+ 'MyForm'rf2.⎕WC ∆                          ⍝ Create a GUI instance
+ rf2.MyForm.⎕FX'r←AttachedToMyForm' 'r←''Firlefanz''' ⍝ Create code in attached namespace
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 2')('Posn'(30 40))('Size'(100 200))
+ 'MyFormOK'rf2.⎕WC ∆                        ⍝ No attached code, to be reported just as Instance
+ ∆←'Form'('Coord' 'Pixel')('Caption' '"Compare" Test 1')('Posn'(30 40))('Size'(100 200))('KeepOnClose' 1)
+ 'MyForm2'rf2.⎕WC ∆                         ⍝ Create a GUI instance but with KeepOnClose←1
+ rf2.MyForm2.⎕FX'r←AttachedToMyForm2' 'r←''World2'''   ⍝ Populate the attached namespace of the class with a FNS
+ code←':Interface IF1' '' ':EndInterface'
+ rf2.⎕FIX code                              ⍝ Interface; not to be reported anywhere
+ rf2.IF1.⎕FX'r←AttachedToIF1' 'r←⍬'         ⍝ Create code in attached namespace of the Interface
+ code←':Interface IF2' '' ':EndInterface'
+ rf2.⎕FIX code                              ⍝ Another Interface; not to be reported anywhere
+ rf2.MyLoggerInstance1←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A non-GUI instance
+ rf2.MyLoggerInstance2←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A non-GUI instance
+ :For i :In ⍳9999
+     'TCPSocket0'rf2.⎕WC'TCPSocket'('LocalPort'(2000+i))     ⍝ TCP Socket instance
+     ⎕DL 1
+     :If 9=rf2.⎕NC'TCPSocket0'
+         :Leave
+     :EndIf
+ :EndFor
+⍝⍝⍝ Processing....
+⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯2 ##.Compare.Merge rf1 rf2
+
+⍝⍝⍝ Checking
+ rep←2⊃buffer
+ →GoToTidyUp 0∊⍴rep
+ (rep1 rep2)←#.APLTreeUtils.dlb¨1↓¨'#.'{⍵⊂⍨⍺∘≡¨(⍴⍺)↑¨⍵}rep
+ expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
+ expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
+ →GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
+ expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
+ expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →GoToTidyUp~expected3 Match rep1 Isolate'Namespace references:'
+ →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2,expected3
+
+ expected1←,⊂'#.Rubbish2.MyForm2'
+ →GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
+ expected2←,⊂'#.Rubbish2.MyForm'
+ →GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
+ expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
+ →GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
+ expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
+ →GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
+ expected5←,⊂'#.Rubbish2.Foo'
+ →GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
+ expected6←,⊂'#.Rubbish2.IF1'
+ →GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
+ →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
+
+ refToGui←(3⊃buffer).f.tc.sf2.list
+ bool←(refToGui.ReportInfo[;2])∊rf2.⎕NL-3 4 9.4 9.5  ⍝ All top level objects
+ →GoToTidyUp 0≠+/⊃∘⍴¨bool/refToGui.ReportInfo[;3]
+ →GoToTidyUp 0∊⊃∘⍴¨(~bool)/refToGui.ReportInfo[;3]
+
+ ⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯1 0 ##.Compare.Merge rf1 rf2
+ ⍝ Same result only that namepsace references are not reported
+
+⍝⍝⍝ Checking
+ rep←2⊃buffer
+ →GoToTidyUp 0∊⍴rep
+ (rep1 rep2)←#.APLTreeUtils.dlb¨1↓¨'#.'{⍵⊂⍨⍺∘≡¨(⍴⍺)↑¨⍵}rep
+ expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
+ expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
+ →GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
+ expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
+ expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2
+
+ expected1←,⊂'#.Rubbish2.MyForm2'
+ →GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
+ expected2←,⊂'#.Rubbish2.MyForm'
+ →GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
+ expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
+ →GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
+ expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
+ →GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
+ expected5←,⊂'#.Rubbish2.Foo'
+ →GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
+ expected6←,⊂'#.Rubbish2.IF1'
+ →GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
+ →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
+
+ R←∆OK
+
+∆TidyUp:
+ rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

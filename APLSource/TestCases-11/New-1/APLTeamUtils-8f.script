@@ -1,0 +1,242 @@
+:Namespace APLTeamUtils ⍝
+⍝ Copyright APL Team Ltd ⋄ http://aplteam.com
+⍝ Homepage: http://aplwiki.com/APLTeamUtils
+⍝ *** Version 1.5 ⋄ 2010-12-21 ***
+⍝ 1.5: Method "GoToWebPage" added
+⍝
+⍝ Needs Version 11 but 12 for "WriteUtf8File" & "ReadUtf8File"
+⍝ Note that :Including this namespace adds a public shared method _
+⍝ "Copyright"  to the class which makes the class "Open Source". _
+⍝ If you don't want this make sure that you include a "Copyright" _
+⍝ method into the class itself which will overwrite the included one.
+⍝ From version 1.32 on, all fns in this script are tested to be _
+⍝ independent from ⎕IO and ⎕ML
+
+    ∇ array←Uppercase array;ToUpper;⎕ML;⎕IO
+      ⎕IO←⎕ML←1
+      'ToUpper'⎕NA'I4 USER32.C32|CharUpper',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' =0T'
+      :If ~0 1∊⍨≡array
+          array←(ToUpper Trans)¨array
+      :Else
+          array←(ToUpper Trans)array
+      :EndIf
+    ∇
+
+    ∇ array←Lowercase array;ToLower;⎕ML;⎕IO
+      ⎕IO←⎕ML←1
+      'ToLower'⎕NA'I4 USER32.C32|CharLower',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' =0T'
+      :If ~0 1∊⍨≡array
+          array←(ToLower Trans)¨array
+      :Else
+          array←(ToLower Trans)array
+      :EndIf
+    ∇
+
+      Trans←{⎕IO←1
+          (⍴⍵)⍴2⊃⍺⍺⊂,⍵
+      }
+
+    IsChar ←{0 2∊⍨10|⎕dr ⍵}  ⍝ Version 12 compatible: is 82=⎕dr in V11
+
+      SplitPath←{
+          ⎕ML←⎕IO←1
+          ⍺←'/\'
+          l←1+-⌊/⍺⍳⍨⌽⍵
+          (l↓⍵)(l↑⍵)
+      }
+
+      Split←{
+          ⎕ML←⎕IO←1
+          ⍺←⎕UCS 13 10 ⍝ Default is CR+LF
+          (⍴,⍺)↓¨⍺{⍵⊂⍨⍺⍷⍵}⍺,⍵
+      }
+
+      Last←{
+          ⎕ML←⎕IO←1
+          ⍺←'.'
+          (⍴,⍵)=where←¯1+⌊/⍺⍳⍨⌽,⍵:0⍴⍵
+          0 1∊⍨≡r←(-where)↑⍵:r
+          ''⍴r
+      }
+
+      Nest←{
+          ⎕ML←⎕IO←1
+          ,(,∘⊂∘,⍣(0 1∊⍨≡⍵))⍵
+      }
+
+      dmb←{
+      ⍝ delete leading, trailing and multiple blanks
+          ⍺←' '
+          ⎕ML←⎕IO←1
+          ~0 1∊⍨≡⍵:∇¨⍵
+          2=⍴⍴⍵:↑∇¨↓⍵
+          (,⍺)≡,⍵:''
+          w←1↓¯1↓⍺{⍵/⍨~(2⍴⍺)⍷⍵}⍺,⍵,⍺
+          (0=⍴⍴⍵)∧1=⍴w:⍬⍴⍵
+          w
+      }
+
+    ∇ r←Copyright
+    ⍝ Copyright: MIT licensed
+      ⎕ML←⎕IO←1
+      :Access Public Shared
+      r←''
+      r,←⊂'Permission is hereby granted, free of charge, to any person'
+      r,←⊂'obtaining a copy of this software and associated documentation'
+      r,←⊂'files (the "Software"), to deal in the Software without'
+      r,←⊂'restriction, including without limitation the rights to use,'
+      r,←⊂'copy, modify, merge, publish, distribute, sublicense, and/or sell'
+      r,←⊂'copies of the Software, and to permit persons to whom the'
+      r,←⊂'Software is furnished to do so, subject to the following'
+      r,←⊂'conditions:'
+      r,←⊂''
+      r,←⊂'The above copyright notice and this permission notice shall be'
+      r,←⊂'included in all copies or substantial portions of the Software.'
+      r,←⊂''
+      r,←⊂'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,'
+      r,←⊂'EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES'
+      r,←⊂'OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND'
+      r,←⊂'NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT'
+      r,←⊂'HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,'
+      r,←⊂'WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING'
+      r,←⊂'FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR'
+      r,←⊂'OTHER DEALINGS IN THE SOFTWARE.'
+      r←,[1.5]r
+    ∇
+
+    ∇ r←{length}FormatDateTime ts;ts2;formatstring;bool;⎕IO;⎕ML;buffer
+⍝ Format the right argument (defaults to ⎕TS if empty) as a string with:
+⍝ 'YYYY-MM-DD HH:MM:SS.MILLISECOND
+⍝ If the right argument has not 7 but 6 or 3 elements, formatting is done accordingly.
+⍝ Via the left argument the length of the right argument can be set to _
+⍝ ⍬, 3, 6 or 7; default is 6; ⍬ Accepts any length of the right argument which is 3,6 or 7.
+⍝ If the right argument is a simple vector, a string is returned
+⍝ If it is a matrix, a matrix is returned
+      ⎕IO←⎕ML←1
+      :If ⍬≡length←{2=⎕NC ⍵:⍎⍵ ⋄ 6}'length'
+          length←''⍴¯1↑⍴ts
+      :EndIf
+      :If ~0∊⍴ts
+          :If 2=⍴⍴ts
+              buffer←{⍵/⍨0<⊃∘⍴¨⍵~¨⊂' ' 0}↓ts
+              'Invalid right argument: must be integer'⎕SIGNAL 11/⍨163≠∪⎕DR¨buffer
+              'Invalid right argument: must not be negative'⎕SIGNAL 11/⍨∨/¯1∊¨×¨buffer
+              'Invalid right argument: must be simple'⎕SIGNAL 11/⍨1≠∪≡¨buffer
+          :Else
+              'Invalid right argument: must be integer'⎕SIGNAL 11/⍨163≠⎕DR ts
+              'Invalid right argument: must not be negative'⎕SIGNAL 11/⍨¯1∊×,ts
+              'Invalid right argument: must be simple'⎕SIGNAL 11/⍨1≠≡ts
+          :EndIf
+      :EndIf
+      :If 2=⍴⍴ts
+          ts2←length↑[2]ts
+      :Else
+          ts2←,[0.5]length↑{0∊⍴⍵:⎕TS ⋄ ts}ts
+      :EndIf
+      :Select ↑length
+      :Case 3
+          formatstring←'ZI4,<->,ZI2,<->,ZI2'
+      :CaseList 6 7
+          formatstring←'ZI4,<->,ZI2,<->,ZI2,< >,ZI2,<:>,ZI2,<:>,ZI2'
+      :Else
+          'Invalid left argument'⎕SIGNAL 11
+      :EndSelect
+      bool←(ts2∨.≠' ')∧ts2∨.≠0
+      r←bool⍀formatstring ⎕FMT(6⌊length)↑[2]bool⌿ts2
+      :If 7=2⊃⍴ts2
+          r←⊃(↓r),¨{0=⍵:'' ⋄ 0∊⍴⍵~' ':'' ⋄ '.',⍕⍵}¨ts2[;7]
+      :EndIf
+      :If 2≠⍴⍴ts
+          r←,r
+      :EndIf
+    ∇
+
+    ∇ R←CreateUUID;∆UuidCreate;⎕ML;⎕IO
+      ⎕ML←⎕IO←1
+      '∆UuidCreate'⎕NA'I RPCRT4|UuidCreate >{I1[4] I1[2] I1[2] I1[2] I1[6]}'
+      R←2⊃∆UuidCreate 1
+      R←'0123456789ABCDEF{-'[1+∊16 17 17 17 17,¨∊¨⍉¨16 16∘⊤¨R],'}'
+    ∇
+
+    ∇ r←ReadUtf8File filename;fno;noOfBytes;bytes;⎕IO;⎕ML;b
+    ⍝ This function works also with the Classic version if the file to be read does not contain "real" Unicode data
+    ⍝ Note that three symbols are processed individually: Great Britain Pound, Euro and Yen.
+    ⍝ That means that a file which contains ASCII chars and those symbols is still processed correctly.
+      ⎕IO←⎕ML←1
+      r←''
+      :Trap 19 22
+          fno←filename ⎕NTIE 0
+      :Else
+          ('Could not read file: ',filename)⎕SIGNAL ⎕EN
+      :EndTrap
+      noOfBytes←⎕NSIZE fno
+      bytes←⎕NREAD fno 83,noOfBytes
+      ⎕NUNTIE fno
+      bytes+←256×bytes<0                 ⍝ Make sure it is unsigned
+      bytes↓⍨←3×239 187 191≡3⍴bytes      ⍝ drop a potential UTF-8 marker
+      r←'UTF-8'⎕UCS bytes
+      :If ∨/(⎕UCS 13 10)⍷r
+          r←Split r
+      :ElseIf ∨/r=⎕UCS 10
+          r←(⎕UCS 10)Split r
+      :EndIf
+    ∇
+
+    ∇ {r}←{append}WriteUtf8File(filename data);fno;fullname;flag;⎕ML;⎕IO
+     ⍝ Write UTF-8 "data" to "filename" (WITHOUT a BOM!)
+      ⎕IO←⎕ML←1
+      r←''
+      append←{2=⎕NC ⍵:⍎⍵ ⋄ 0}'append'
+      flag←0
+      :If ~0 1∊⍨≡data
+          data←¯2↓⊃,/data,¨⊂⎕UCS 13 10
+      :EndIf
+      :Repeat
+          :Trap 19 22
+              fno←filename ⎕NTIE 0 17 ⍝ Open exclusively
+              filename ⎕NERASE fno
+              flag←1
+          :Case 22
+              flag←1 ⍝ That's just fine
+          :Else
+              ('Could not open file ',filename)⎕SIGNAL ⎕EN
+          :EndTrap
+      :Until flag
+      fno←filename ⎕NCREATE 0
+     ⍝ Enforce UTF-8
+      data←⎕UCS'UTF-8'⎕UCS data
+      data ⎕NAPPEND fno
+      ⎕NUNTIE fno
+    ∇
+
+    ∇ {r}←GoToWebPage url;wsh;⎕WX
+    ⍝ Fires up the default browser and goes to "url"
+      ⎕WX←1
+      r←⍬
+      url←'http://'{((⍺≢Lowercase(⍴⍺)↑⍵)/⍺),⍵}url
+      'wsh'⎕WC'OLEClient' 'WScript.Shell'
+      {}wsh.Run url
+    ∇
+
+      FindPathTo←{
+      ⍝ Tries to find ⍵ (typically the name of a needed script) in:
+      ⍝ 1. the same namespace ⎕THIS is coming from
+      ⍝ 2. #
+      ⍝ 3. Where it was called from (NOT the same as 1.)
+      ⍝ If it fails to find ⍵, an empty string is returned.
+          ⎕IO←1 ⋄ ⎕ML←1
+          base←{                           ⍝ were are we coming from?
+              (~0∊⍴b←{' '~⍨⍵↓⍨-'.'⍳⍨⌽⍵}⍕⎕CLASS ⍵):⍎b
+              i←'.'Split⍕⎕THIS             ⍝ Split full path up
+              b←∧\~'['∊¨i                  ⍝ "[" = instances - we need something better
+              ⍎⊃{⍺,'.',⍵}/b/i              ⍝ That's the base namespace
+          }⎕THIS
+          0<base.⎕NC ⍵:base                ⍝ Is it in that dir?
+          0<#.⎕NC ⍵:#                      ⍝ Is it in root?
+          0::''                            ⍝ to be on the save side (may be called from inside an instance)
+          path←⍎1⊃⎕NSI~⊂⍕⎕THIS             ⍝ From where got we called?
+          0<path.⎕NC ⍵:path                ⍝ May be it's there?
+          ''                               ⍝ Give up
+      }
+
+:EndNamespace ⍝ APLTeamUtils

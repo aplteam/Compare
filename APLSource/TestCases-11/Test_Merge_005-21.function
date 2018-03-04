@@ -1,0 +1,9 @@
+ R←Test_Merge_005(stopFlag batchFlag);buffer;⎕TRAP
+⍝ Exercise the "Compare.Merge" method on Container1 and Container2
+ R←∆Failed
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+
+ buffer←¯1 ##.Compare.Merge #.Container1 #.Container2
+ →PassesIf∧/~0∊¨⍴¨buffer
+
+ R←∆OK

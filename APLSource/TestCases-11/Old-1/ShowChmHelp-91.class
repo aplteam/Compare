@@ -1,0 +1,188 @@
+:Class ShowChmHelp
+⍝ This class allows you to show up CHM help files from APL.
+⍝ You can also display particular topics, but for this you must know the topic name.
+⍝ Note that for technical reasons erasing the instance let the help file disappear _
+⍝ immediately. The reason is that the DLL *must* be unloaded properly, otherwise _
+⍝ chances are that APL will crash. So make sure that the instance lives as long as _
+⍝ as you want the help file to have a visual appearance. As soon as the instance _
+⍝ is deleted, regardless how, the desctructor might get called - and will get _
+⍝ called also the precise schedule is for priciple reasons unkown.
+⍝ This class does not support the depricated "DisplayContext" method.
+
+    ⎕IO←1 ⋄ ⎕ml←3
+
+    :Include APLTeamUtils
+
+    ∇ r←Version
+      :Access Public shared
+      r←(⍕⎕THIS)'1.0.0' '2008-12-05'
+    ∇
+
+⍝⍝⍝ Constructor
+
+    ∇ make
+      :Access Public Instance
+      :Implements Constructor
+      InitExternalFns ⍬
+      Init ⍬
+    ∇
+
+∇ Quit
+⍝⍝⍝ Destructor
+ :Implements Destructor
+ :if 0<⎕nc '∆Quit'
+ {}∆Quit 0 0 18 0
+ {}∆Quit 0 0 29 cookie
+ :endif
+ ⎕EX'_'⎕NL 3
+ ⎕EX'HH_'
+ ⎕EX'∆'⎕NL 2
+∇
+
+    ∇ InitExternalFns dummy
+      'ToLower'⎕NA'I4 USER32.C32|CharLower',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' =0T'
+      'ToUpper'⎕NA'I4 USER32.C32|CharUpper',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' =0T'
+      'GetDesktopWindow'⎕NA'I4 user32.C32∣GetDesktopWindow'
+      '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+      '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      '∆DisplayTopic'⎕NA'I4 hhctrl.ocx.C32∣HtmlHelp',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I <0T[] I I'
+      '∆DisplayHelpfile'⎕NA'I4 hhctrl.ocx.C32|HtmlHelp',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I <0T[] I I'
+      '∆Quit'⎕NA'I4 hhctrl.ocx.C32|HtmlHelp',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I I I I'
+      '∆Init'⎕NA'I4 hhctrl.ocx.C32|HtmlHelp',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I I I >I'
+      '∆GetLastError'⎕NA'I4 kernel32.C32|GetLastError'
+    ∇
+
+∇ Init Parms;Allowed
+ _WindowsDefault←''
+ :If IsChar _WindowsDefault
+     _WindowsDefault←Uppercase _WindowsDefault
+     :If ~0∊⍴,_WindowsDefault
+     :AndIf (⊂_WindowsDefault)∊'DEVELOPMENT' 'DESKTOP'
+         6 ⎕SIGNAL⍨'Check parameter "WindowsDefault"!'
+     :EndIf
+ :EndIf
+ cookie←2⊃∆Init 0 0 28 0
+ ⎕EX'HH_'
+ h
+∇
+
+    ∇ CheckInit Dummy
+      :If 0=⎕NC'∆WINDOWDEFAULT'
+          Init''
+      :ElseIf 0=⎕NC'HH_'
+      :OrIf 0∊⍴HH_.⎕NL 2
+          h
+      :EndIf
+    ∇
+
+⍝⍝⍝ Public
+
+    ∇ {R}←DisplayHelpfile Filename;handle
+      :Access Public Instance
+      handle←GetDefaultHandle''
+      :If '.CHM'≢Uppercase ¯4↑Filename
+          Filename,←'.chm'
+      :EndIf
+      :If DoesFileExist Filename
+          R←(∆DisplayHelpfile handle Filename HH_.DISPLAY_TOPIC 0)''
+      :Else
+          R←¯1 'File not found'
+      :EndIf
+    ∇
+
+    ∇ {r}←{cs}DisplayTopic(filename topicName);appHandle;helpWindowName;allowed
+ ⍝ Displays a particular topic identified by name within a particular help file.
+ ⍝ Optional parameters: HelpWindowName, appHandle
+      :Access Public Instance
+      appHandle←GetDefaultHandle''
+      helpWindowName←'Main'
+      :If 0<⎕NC'cs'
+      :AndIf ~0∊⍴,cs
+          allowed←'helpWindowName' 'appHandle'
+          'Invalid optional parameters'⎕SIGNAL 11/⍨~∧/(cs.⎕NL-2)∊allowed
+          ⍎cs.{l←⊃,/' ',¨⎕NL-2 ⋄
+              ('(',l,')←cs.⍎''',l,'''')}⍬
+      :EndIf
+      :If DoesFileExist filename
+          :If '.HTM'≢¯4↑filename←filename,'::/',topicName
+              filename,←'.htm'
+          :EndIf
+          :If ~'>'∊filename
+          :AndIf ~0∊⍴helpWindowName
+              filename,←'>',helpWindowName
+          :EndIf
+          r←(∆DisplayTopic appHandle filename HH_.DISPLAY_TOPIC 0)''
+      :Else
+          r←¯1 'File not found'
+      :EndIf
+    ∇
+
+⍝⍝⍝ Private stuff
+
+    ∇ R←DoesFileExist Filename;Handle;Trash
+      Filename↓⍨←{(-+/∧\(⌽⍵)∊'/\')}Filename
+      :If R←0≠Handle←1⊃FindFirstFile Filename''
+          Trash←∆FindClose Handle
+      :EndIf
+    ∇
+
+      FindFirstFile←{
+          ⎕IO←0
+          ¯1=↑rslt←∆FindFirstFile ⍵:0 ∆GetLastError
+          (1 6⊃rslt)←FindTrim(1 6⊃rslt)        ⍝ shorten the file name at the null delimiter
+          (1 7⊃rslt)←FindTrim(1 7⊃rslt)        ⍝ and for the alternate name
+          rslt
+      }
+
+    ∇ R←GetDefaultHandle Type
+    ⍝ Type may be "Development" or "Desktop" or empty.
+    ⍝ If it is empty, _WindowsDefault is taken as a default.
+    ⍝ If _WindowsDefault is empty, "Development" is taken as default.
+      :If 0∊⍴,Type
+          :If ~0∊⍴,_WindowsDefault ⍝ can be specified by "Init"
+              Type←_WindowsDefault
+          :Else
+              Type←'Development'
+          :EndIf
+      :EndIf
+      :If 'Development'≡4⊃'.'⎕WG'aplVersion'
+      :AndIf 'DEVELOPMENT'≡Type
+          R←'⎕se'⎕WG'Handle'
+      :Else
+          R←GetDesktopWindow
+      :EndIf
+    ∇
+
+    ∇ h
+      ⎕EX'HH_'
+      'HH_'⎕NS''
+      :With 'HH_'
+          DISPLAY_TOPIC←0
+          HELP_FINDER←0
+          DISPLAY_TOC←1
+          DISPLAY_INDEX←2
+          DISPLAY_SEARCH←3
+          SET_WIN_TYPE←4
+          GET_WIN_TYPE←5
+          GET_WIN_HANDLE←6
+          ENUM_INFO_TYPE←7
+          SET_INFO_TYPE←8
+          SYNC←9
+          RESERVED1←10
+          RESERVED2←11
+          RESERVED3←12
+          KEYWORD_LOOKUP←13
+          DISPLAY_TEXT_POPUP←14
+          HELP_CONTEXT←15
+          TP_HELP_CONTEXTMENU←16
+          TP_HELP_WM_HELP←17
+          CLOSE_ALL←18
+      :End
+    ∇
+
+    IsChar←{' '=1↑0⍴∊⍵}
+
+      FindTrim←{
+          ⍵↑⍨(⍵⍳↑⎕AV)-⎕IO
+      }
+:EndClass

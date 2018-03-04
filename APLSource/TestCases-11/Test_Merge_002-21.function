@@ -1,0 +1,80 @@
+ R←Test_Merge_002(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6
+⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in [1] only
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+ R←∆Failed
+
+ Isolate←{{⍵↑⍨+/∧\~':'∊¨⍵}(⍺⍳⊂⍵)↓⍺}
+ Match←{(∧/⍺∊⍵)∧(∧/⍵∊⍺)}
+
+⍝⍝⍝ Preperations
+ #.⎕SHADOW¨'Rubbish1' 'Rubbish2'
+ rf1←⍎'Rubbish1'#.⎕NS''                     ⍝ The two things to be compared
+ rf_←⍎'OrdinaryNamedNamespace'rf1.⎕NS''     ⍝ To be reported as empty only
+ rf1.RefToOrdinaryNamedNamespace←rf_        ⍝ To be reported when refsAreRubbish←1
+ rf1.MyLoggerInstance1←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ A Class instance
+ rf1.RefToUnnamedNS1←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
+ rf1.RefToUnnamedNS2←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
+ 'Sub'rf1.RefToUnnamedNS2.⎕NS''             ⍝ Named sub-namespace in unnamed NS
+ rf1.RefToUnnamedNS2.CircularRef←rf1.RefToUnnamedNS2.Sub ⍝ Ref pointing downwards, creating a potential problem
+ 'SubNSWithCode'rf1.⎕NS''                   ⍝ We don't want to see this reported as rubbish: it's named & it contains sub-namespaces
+ rf1.SubNSWithCode.Sub1WithCode←⎕NS''       ⍝ To be reported when refsAreRubbish←1
+ rf1.SubNSWithCode.Sub1WithCode.⎕FX'r←Hello' 'r←''World'''
+ rf1.MyLoggerInstance2←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf1.SubNSWithCode.CodeSub2←⎕NS''           ⍝ To be reported when refsAreRubbish←1
+ rf1.SubNSWithCode.CodeSub2.⎕FIX':Class Test' '∇r←Hello' ':Access Public Shared' 'r←''World''' '∇' ':EndClass'
+ rf1.SubNSWithCode.Empty←⎕NS''              ⍝ To be reported when refsAreRubbish←1
+ rfa←⍎'ContainerA'rf1.⎕NS''                 ⍝ Ordinary non-empty namespace
+ rf1.ContainerA.⎕FX'r←ContainerAHello' 'r←''World'''
+ 'EmptyAndNamed1'rf1.ContainerA.⎕NS''       ⍝ Ordinary empty sub-namespace
+ rf1.RefToEmptyUnnamed1←rf1.ContainerA.⎕NS''⍝ To be reported when refsAreRubbish←1
+ 'ContainerA2'rfa.⎕NS''                     ⍝ Ordinary non-empty sub-namespace
+ rfa.ContainerA2.⎕FX'r←ContainerA2_Hello' 'r←''World'''
+ rfb←⍎'ContainerB'rf1.⎕NS''                 ⍝ Ordinary non-empty namespace
+ rf1.ContainerB.⎕FX'r←ContainerBHello' 'r←''World'''
+ 'EmptyAndNamed2'rf1.ContainerB.⎕NS''       ⍝ Ordinary empty sub-namespace
+ rf1.RefToEmptyUnnamed2←rf1.ContainerB.⎕NS''⍝ To be reported when refsAreRubbish←1
+ 'ContainerB2'rfb.⎕NS''                     ⍝ Ordinary non-empty sub-namespace
+ rfb.ContainerB2.⎕FX'r←ContainerB2_Hello' 'r←''World'''
+ rf1.MyLoggerInstance3←⎕NEW #.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf_←⍎'HoldSubNamespaces'rf1.⎕NS''          ⍝ Named & not empty, therefore not reported
+ 'Sub1Empty'rf_.⎕NS''                       ⍝ Named and empty
+ 'Sub2NonEmpty'rf_.⎕NS''                    ⍝ Named and not empty
+ rf_.Sub2NonEmpty.⎕FX'r←Sub2NonEmptyHello' 'r←''World'''
+
+ rf2←⍎'Rubbish2'#.⎕NS''                     ⍝
+
+⍝⍝⍝ Processing....
+⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯1 ##.Compare.Merge rf1 rf2
+
+⍝⍝⍝ Checking
+ rep←#.APLTreeUtils.dlb 2⊃buffer
+ →∆TidyUp×PassesIf~0∊⍴rep
+ expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →∆TidyUp×PassesIf expected1 Match rep Isolate'Empty Namespaces:'
+ expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
+ →∆TidyUp×PassesIf expected2 Match rep Isolate'Class Instances:'
+ expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
+ expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →∆TidyUp×PassesIf expected3 Match rep Isolate'Namespace references:'
+ →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3
+
+ ⍝buffer←##.Compare.Merge rf1 rf2
+ buffer←¯1 0 ##.Compare.Merge rf1 rf2
+ ⍝ Same result only that namepsace references are not reported
+
+⍝⍝⍝ Checking
+ rep←#.APLTreeUtils.dlb 2⊃buffer
+ →∆TidyUp×PassesIf~0∊⍴rep
+ expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →∆TidyUp×PassesIf expected1 Match rep Isolate'Empty Namespaces:'
+ expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
+ →∆TidyUp×PassesIf expected2 Match rep Isolate'Class Instances:'
+ expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
+ expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2
+
+ R←∆OK
+
+∆TidyUp:
+ rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

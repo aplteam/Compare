@@ -1,0 +1,856 @@
+:Class IniFiles
+⍝ <h2>APL-like INI files
+⍝ <h3>Overview
+⍝ This class provides a kind of APL-like INI files. That means that an entry in an INI _
+⍝ file like this:
+⍝ <pre>MyString='Foo'</pre>
+⍝ leads to a string while:
+⍝ <pre>MyNumber=5</pre>
+⍝ generates a scalar number in APL. Numeric vectors are possible as well:
+⍝ <pre>MyVector=1 2 3</pre>
+⍝ Even nested structures can be build up:
+⍝ <pre>nested=''
+⍝ nested,='Georg Bush'
+⍝ nested,=10 20 30
+⍝ nested,='Bill Clinton'
+⍝ </pre>
+⍝ results in a three-element vector:
+⍝ <pre>'George Bush' (10 20 30) 'Bill Clinton'</pre>
+
+⍝ <h3>Restrictions
+⍝ Note that the INI file is read only once, when the class in instanciated, so using _
+⍝ this class is not suitable in case the INI file might be changed by other _
+⍝ apps/processes while the application in need of the INI file is running _
+⍝ <b>and</b> needs to take those changes into account.
+
+⍝ <h3>Preconditions
+⍝ <h4>"UnicodeFile" class
+⍝ Until version 1.6, the class needed the "UnicodeFile" class. Therefore, a pointer
+⍝ was needed in case that class was not to be found at its regular place: # or ⎕SE.
+⍝ This is not true any longer, therefore the property "refToUnicodeClass" is ignored.
+⍝ It continues to exist only for compatability reasons.
+
+⍝ <h4>"APLTeamUtils" class
+⍝ The "IniFiles" class relies on the scripted namespace "APLTeamUtils" which _
+⍝ is :Included. Note that "APLTeamUtils" must exist on the same level as "IniFiles" _
+⍝ itself.
+
+⍝ <h3>Features
+⍝ <h4>Accessing Keys
+⍝ Once an instance is created, keys can be accessed in two different ways:
+⍝ * Using the "Get" method which takes two arguments, "Section" and "Key" (see there)
+⍝ * Using indexing which is possible because an instance of "IniFiles" has a _
+⍝   default property. Note that when using this syntax you must provide a simple _
+⍝   string  containing a section name and a key name seperated by a colon.
+⍝ If an unkown section/key is referenced, an interupt is signalled. Use the "Exist" _
+⍝ method to check the existence of a certain key upfront.
+⍝ Section names as well as key names are case independent.
+
+⍝ <h4>Adding and Changing Keys and/or Sections
+⍝ Keys might be changed/added by assignment or via the "Put" method. However, _
+⍝ changes will persist only if the "Save" method is invoked at some point.
+⍝ To add a new section, one has to use the "AddSection" method. Assigning a value _
+⍝ with an unkown section name will generate an error.
+⍝ Having a "Save" method available on an instance of an IniFile object might prove _
+⍝ to be useful, but keep in mind that this method needs to be used carefully:
+⍝ # An INI file is by definition supposed to direct an application. It is a _
+⍝   contradiction when the application changes the INI file.
+⍝ # INI files are neither thread save nor multi-user-save.
+⍝ # Although the "Save" method tries to preserve remarks found in an INI file, the _
+⍝   sequenece of those remarks might very well change. For example, comment lines _
+⍝   situated between nested assignments will go to the end of the assignment. _
+⍝   Another example is the re-assignment of a nested assignment: only comments _
+⍝   on values which have'nt changed at all will survive.
+
+⍝ <h4>Placeholders
+⍝ If you need to define a number of pathes like:
+⍝ <pre> path='C:\MyApp'
+⍝ pathCertificates='C:\MyApp\Certificates'
+⍝ pathRootCertificates='C:\MyApp\RootCert'
+⍝ pathLogfiles='C:\MyApp\Log'</pre>
+⍝ you can simplify this by using the "replacement" syntax:
+⍝ <pre> path='C:\MyApp'
+⍝ pathCertificates='{path}\Certificates'
+⍝ pathRootCertificates='{path}\RootCert'
+⍝ pathLogfiles='{path}\Log'</pre>
+⍝ However, the "path" variable can only be used in it's own section, it is _
+⍝ <b>not</b> known elsewhere. If you need to define the same path in more than _
+⍝  one section, check the "Local variables" feature.
+
+⍝ <h4>Special "Add" Syntax
+⍝ Sometimes one needs to specify potentially long lists on a particular keyword, for _
+⍝ example a list of IP addresses a server is supposed to ignore: "DenyIP". Specifying _
+⍝ them as one single line is very hard to read and prone to error in case of a change.
+⍝ For this purpose a special syntax can be used:
+⍝ <pre> DenyIP=''
+⍝ DenyIP,='2001:0db8:0000:0000:0000:0000:1428:57ab'
+⍝ DenyIP,='2001:0db8:0000:0000:0000::1428:57ab'</pre>
+⍝ This leads to a nested vector of strings. Note that you <b>must</b> initialyze the _
+⍝ vars as an empty vector in the first place. In that case, the "=," syntax implies _
+⍝ an {enlose} on the data on the right of "=".
+⍝ This syntax is supported for both, characters and numbers.
+
+⍝ <h4>Local variables
+⍝ You can define variables above the very first section. Those are called "local" _
+⍝ variables. They serve only one purpose: to be used as replacement values. As local _
+⍝ variables they will only be available during the creation of an IniFiles instance, _
+⍝ but then such a value can be used in every section. For example, if this is the _
+⍝ complete INI file:
+⍝ <pre> path='C:\MyAppHomeDir'
+⍝ [section1]
+⍝ PathToLogfiles='{path}\Logfiles'
+⍝ [section2]
+⍝ PathToCertificates='{path}\Certificates'</pre>
+⍝ That would work just fine.
+⍝ However, there are some restrictions:
+⍝ # Locals cannot be nested
+⍝ # Locals can only be set in a file, they cannot be set by a program
+
+⍝ <h3>Examples
+⍝ <pre>
+⍝   myIni←⎕NEW #.IniFiles (,⊂'c:\myAppl.ini')
+
+⍝ ⍝ Request all data of section "General"
+⍝   myIni[⊂'General:']
+
+⍝ ⍝ Request key "foo" of section "GENERAL":
+⍝   myIni[⊂'General:foo']
+
+⍝ ⍝ Request key "foo" from "GENERAL" and "foo2" from "PATHES":
+⍝   myIni['General:foo' 'Pathes:foo2']
+
+⍝ ⍝ Request all section and all keys:
+⍝   myIni.Get '' ''
+
+⍝ ⍝ Request all keys of section "GENERAL":
+⍝   myIni.Get 'General' ''
+
+⍝ ⍝ Request key "foo" of section "GENERAL":
+⍝   myIni.Get 'General' 'foo'
+
+⍝ ⍝ Request keys "foo1" and "foo2" of section "GENERAL" (_must_ exist!):
+⍝   myIni.Get 'General' ('foo1' 'foo2')
+
+⍝ ⍝ Create a new key "foo_new" in section "GENERAL":
+⍝   (1 2 3) myIni.Set 'General' 'foo_new'
+
+⍝ ⍝ Set key "foo_new" in section "GENERAL":
+⍝   myIni[⊂'General:foo_new']←⊂1 2 3
+
+⍝ ⍝ Create a new ini file:
+⍝   myIni←⎕NEW #.IniFiles   ⍝ or myIni←⎕NEW #.IniFiles (,⊂'')
+
+⍝ ⍝ Save the ini file:
+⍝   myIni.Save 'NewFile'
+
+⍝ ⍝ Set "Default" property:
+⍝   myIni[⊂'Default']←⊂¯1 ¯1
+
+⍝ ⍝ Requesting an undefined key:
+⍝   ¯1 ¯1 ←→ myIni[⊂'Config:unknown']
+
+⍝ ⍝ Note that there must be a section "Config"!
+⍝ </pre>
+
+    :include APLTeamUtils
+
+    ⎕ML←3 ⋄ ⎕IO←1
+
+    ∇ r←Version
+      :Access Public Shared
+      r←(⍕⎕THIS)'1.6.0' '2000-01-04'
+    ∇
+
+    :Property RefToUnicodeClass
+    ⍝ This property is depricated. It continues to exist only for compatability!
+    ⍝ Any setting is ignored. The class comes with it's own set of file functions.
+    :Access Public
+        ∇ r←get
+          r←_refToUnicodeClass
+        ∇
+    :EndProperty
+
+    :Property IniFilename
+    :Access Public
+        ∇ r←get
+          r←_IniFilename
+        ∇
+    :EndProperty
+
+    :Property Default
+    :Access Public
+    ⍝ This property is <b>initialised</b>! If set, indexing an unknown key will _
+    ⍝ return the value of this property.
+        ∇ r←get
+          'No default defined!'⎕SIGNAL 6/⍨0=⎕NC'_default'
+          r←_default
+        ∇
+        ∇ set arg
+          _default←arg.NewValue
+        ∇
+    :EndProperty
+
+    :Property Changed
+    ⍝ Read-only property that tells you that the data from the INI file was changed later on by assignment.
+    ⍝ Note that those changes will persist only if the "Save" method is invoked at some point.
+    :Access Public
+        ∇ r←get
+          r←_changed
+        ∇
+    :EndProperty
+
+    :Property keyed default data
+    ⍝ This property allows external access to the INI data via indexing.
+        ∇ set val;where;EndHold;keys;section;key;data;where2;i;buffer;buffer2;ref;name;line;KEY;TOC;toc;this;new;newItem;comments
+          keys←{2=≡⍵:⍵ ⋄ ↑⍵}val.Indexers
+          'Length Error'⎕SIGNAL(≠/↑∘⍴¨,¨keys(,val.NewValue))/11
+          keys←{~':'∊⍵:⍵ ⋄ ⍵{((⍵-1)↑⍺)(⍵↓⍺)}⍵⍳':'}¨keys
+          :For i :In ⍳⍴,keys
+              buffer←i⊃,keys
+              'Use "Section:key" syntax'⎕SIGNAL 11/⍨2≠⍴buffer
+              (section key)←buffer
+              :If (⍴_Sections)<where←(Uppercase _Sections)⍳⊂Uppercase section
+     ⍝ Event the section is new!
+                  (Uppercase section)⎕NS''
+                  _Sections,←⊂section
+                  {⍵._Data←0 4⍴⍬ ⋄ ⍵.generalRemarks←''}⍎Uppercase section
+                  _changed←1
+                  where←⍴_Sections
+              :EndIf
+              data←{⍵._Data}ref←⍎Uppercase where⊃_Sections
+              KEY←Uppercase key
+              TOC←Uppercase toc←data[;1]
+              :If (1⊃⍴data)≥where2←TOC⍳⊂KEY
+     ⍝ It is an update!
+                  buffer←i⊃,val.NewValue
+                  'Invalid depth'⎕SIGNAL 11/⍨~0 1 2∊⍨≡buffer
+                  :If 2=≡buffer
+                      new←''
+                      :For this :In buffer
+                          :If IsChar this
+                              newItem←⊂ReplaceCurlies toc this
+                              newItem,←⊂'''',(DoubleQuotes this),''''
+                              new,←⊂newItem
+                          :Else
+                              new,←⊂2⍴⊂⍕this
+                          :EndIf
+                      :EndFor
+                      _changed∨←data[where2;2]≢1⊃¨new
+                      :If (1+⍴new)≠⍴4⊃data[where2;] ⍝ Add one for initialiation (nested!)
+                      :AndIf ~0∊⍴4⊃data[where2;]
+                 ⍝ The length has changed, so the comments do not any longer fit!
+                          comments←(1,(2⊃data[where2;])∊(1⊃¨new))/4⊃data[where2;]
+                          comments←(1,(1⊃¨new)∊2⊃data[where2;])\comments
+                          data[where2;4]←⊂comments
+                      :EndIf
+                      data[where2;2 3]←↓⍉⊃new
+                  :Else
+                      :If '{'∊buffer
+                          data[where2;2]←⊂ReplaceCurlies toc buffer
+                          data[where2;3]←⊂'''',(DoubleQuotes buffer),''''
+                      :EndIf
+                      _changed∨←data[where2;2]≢⊂buffer
+                      data[where2;2]←⊂DoubleQuotes buffer
+                  :EndIf
+              :Else
+     ⍝ key is new in this section
+                  buffer←i⊃,val.NewValue
+                  'Invalid depth'⎕SIGNAL 11/⍨~0 1 2∊⍨≡buffer
+                  :If 2=≡buffer
+                      new←''
+                      :For this :In buffer
+                          :If IsChar this
+                              newItem←⊂ReplaceCurlies toc this
+                              newItem,←⊂'''',(DoubleQuotes this),''''
+                          :Else
+                              newItem←2⍴⊂⍕this
+                          :EndIf
+                          new,←⊂newItem
+                      :EndFor
+                      _changed←1
+                      data⍪←(⊂key),(↓⍉⊃new),⊂''
+                  :Else
+                      :If 2=+/'{}'∊buffer
+                          name←{{⍵↑⍨¯1+'}'⍳⍨⍵}⍵↓⍨⍵⍳'{'}buffer
+                          :If (1⊃⍴ref._Data)<line←(Uppercase ref._Data[;1])⍳⊂Uppercase name
+                              6 ⎕SIGNAL⍨'Unknown: "',name,'"'
+                          :EndIf
+                          buffer2←(line⊃ref._Data[;2]){a←¯1+⍵⍳'{' ⋄ w←a⌽⍵ ⋄ (-a)⌽⍺,⍵↓⍨⍵⍳'}'}buffer
+                      :Else
+                          buffer2←buffer
+                      :EndIf
+                      :If IsChar buffer
+                          buffer←DoubleQuotes buffer
+                          buffer←'''',(⍕buffer),''''
+                      :Else
+                          buffer←{0 1∊⍨≡⍵:⍕⍵ ⋄ ∇¨⍵}buffer
+                      :EndIf
+                      data⍪←key buffer2 buffer''
+                      _changed←1
+                  :EndIf
+              :EndIf
+              data{⍵._Data←⍺}⍎Uppercase where⊃_Sections
+          :EndFor
+        ∇
+
+        ∇ r←get arg;keys;bool;where;this;KEYS;THIS;i;noOf
+          'Invalid argument'⎕SIGNAL 11/⍨0 1∊⍨≡keys←↑arg.Indexers
+          :If 0∊⍴keys←{~':'∊⍵:⍵ ⋄ ⍵{((⍵-1)↑⍺)(⍵↓⍺)}⍵⍳':'}¨keys
+              r←''
+          :Else
+              'Invalid key'⎕SIGNAL 11/⍨0=⍴∊keys
+              KEYS←Uppercase¨keys
+              :If 0∊bool←(1⊃¨KEYS)∊Uppercase _Sections
+                  11 ⎕SIGNAL⍨'Unknown section: ',⊃{⍺,',',⍵}/∪(~bool)/1⊃¨keys
+              :EndIf
+              r←''
+              :For i :In ⍳⍴keys
+                  THIS←i⊃,KEYS
+                  this←i⊃,keys
+                  :If 0∊⍴2⊃this
+                      r,←⊂{({⍵⌿⍨0<↑∘⍴¨⍵[;1]}⍵._Data)[;2]}⍎1⊃THIS
+                  :Else
+                      noOf←{1⊃⍴⍵._Data}⍎1⊃THIS
+                      :If noOf<where←(2⊃THIS){(Uppercase ⍵._Data[;1])⍳⊂Uppercase ⍺}⍎1⊃THIS
+                          :If 0=⎕NC'_default'
+                              6 ⎕SIGNAL⍨'Unknown: ',2⊃this
+                          :Else
+                              r,←⊂_default
+                          :EndIf
+                      :Else
+                          r,←where{⍵._Data[where;2]}⍎1⊃THIS
+                      :EndIf
+                  :EndIf
+              :EndFor
+              :If ⍬≡⍴keys
+                  :If 1=≡r
+                      r←↑r
+                  :Else
+                      r←r[1]
+                  :EndIf
+              :EndIf
+          :EndIf
+        ∇
+    :EndProperty
+
+⍝⍝⍝ Constructors
+
+    ∇ make0;parent
+      ⍝ no parameter: Creates a new INI file by definition
+      :Implements Constructor
+      :Access Public
+      Create''
+    ∇
+
+    ∇ make1(IniFilename)
+      ⍝ Takes the name of the INI file to be processed as parameter.
+      :Implements Constructor
+      :Access Public
+      :Trap 911
+          Create IniFilename
+      :Else
+          11 ⎕SIGNAL⍨1⊃⎕DM
+      :EndTrap
+    ∇
+
+    ∇ make2(IniFilename dummy)
+      :Implements Constructor
+      :Access Public
+      ⍝ Takes the name of the INI file and what originally was supposed
+      ⍝ to be a reference to the "UnicodeFile" class as parameters.
+      ⍝ However, that property is not needed any longer (since version 1.6),
+      ⍝ and for that reason the argument is simply ignored.
+      Create IniFilename
+    ∇
+
+    ∇ Create IniFilename;data;buffer2;bool;thisSection;this;ref;buffer;name;value;toc;val2;where;value2;sec;i;allRemarks;sectionRemarks;remark;TOC;NAME
+     ⍝ Called by the official constructors
+      _changed←0
+      _Sections←''
+      :If ~0∊⍴_IniFilename←IniFilename
+          _IniFilename←CheckExtension _IniFilename
+          data←ReadUtf8File _IniFilename
+          data←{0 1∊⍨≡⍵:⊂⍵ ⋄ ⍵}data
+          data←{(0<∊⍴∘,¨⍵)⌿⍵}data
+          buffer2←⊃data
+          bool←{a∨≠\a←⍵=''''}buffer2
+          ((,bool)/,buffer2)←' '
+          allRemarks←(';'⍳⍨¨⊂[2]buffer2)↓¨data
+          data←(¯1+';'⍳⍨¨⊂[2]buffer2)↑¨data
+          data←{⍵↓⍨-+/∧\' 	'∊⍨⌽⍵}¨data
+          :Trap 911
+              (data locals allRemarks)←GetLocals data allRemarks
+          :Else
+              911 ⎕SIGNAL⍨1⊃⎕DM
+          :EndTrap
+          :If ~0∊⍴data
+              data allRemarks←(⊂+\'['=↑¨data)⊂¨data allRemarks
+          :AndIf ~0∊⍴_Sections←∪~∘'[ ]'∘↑¨data
+              ⎕NS∘''¨sec←Uppercase _Sections
+              (⍎¨sec)._Data←⊂0 4⍴''
+              :For thisSection sectionRemarks :In ↓⍉⊃data allRemarks
+                  this←'[]'~⍨1⊃thisSection
+                  ref←⍎Uppercase this
+                  ref.generalRemarks←⊂{⍵↓⍨+/∧\' '=⍵}1⊃sectionRemarks
+                  buffer←'='Split¨1↓thisSection
+                  TOC←Uppercase toc←' '~¨⍨1⊃¨buffer
+                  buffer←2⊃¨{2↑⍵,'' ''}¨buffer
+                  :For i :In ⍳⍴toc
+                      NAME←Uppercase name←i⊃toc
+                      value←i⊃buffer
+                      :If ~0∊⍴value
+                          ('Invalid definition: ',name)⎕SIGNAL 911/⍨~0 1∊⍨≡⍎value
+                      :EndIf
+                      remark←{⍵↓⍨+/∧\' '=⍵}(1+i)⊃sectionRemarks ⍝ first one is the section
+                      :If 0∊⍴name
+                          ref._Data⍪←⍬ ⍬ ⍬ remark
+                      :Else
+                          :If ∧/'{}'∊value
+                              value2←⍎ReplaceCurlies((ref._Data[;1])value)
+                          :Else
+                              value2←⍎value
+                          :EndIf
+                          where←(Uppercase ref._Data[;1])⍳⊂NAME~','
+                          :If where>1⊃⍴ref._Data
+                              ref._Data⍪←name value2 value remark
+                          :ElseIf ','∊name
+                              :If 0∊⍴2⊃ref._Data[where;] ⍝ Is it the first time?
+                                  ref._Data[where;4]←⊂¨ref._Data[where;4]
+                                  ref._Data[where;3]←⊂''
+                              :EndIf
+                              ref._Data[where;2]←⊂(2⊃ref._Data[where;]),⊂value2
+                              ref._Data[where;3]←⊂(3⊃ref._Data[where;]),⊂value
+                              ref._Data[where;4]←⊂(4⊃ref._Data[where;]),⊂remark
+                          :Else
+                              ref._Data[where;2 3 4]←value2 value remark
+                          :EndIf
+                      :EndIf
+                  :EndFor
+                  :If 0∊⍴ref._Data
+                      ref.Remarks←''
+                  :Else
+                      ref.Remarks←sectionRemarks~⊃,/{2=≡⍵:⍵ ⋄ ⊂⍵}¨ref._Data[;4]
+                  :EndIf
+              :EndFor
+          :EndIf
+      :EndIf
+      ⎕DF(⍕⎕THIS),' on <',_IniFilename,'>'
+    ∇
+
+    ∇ r←{default}Get name;row;this;ref;subRow;where;thisSection;bool;section;key
+    ⍝ Returns the (enclosed) value for a single value or a vector of values _
+    ⍝ if more than one key was provided.
+    ⍝ "name" might be either
+    ⍝ <pre>('sectionName' 'key')</pre>
+    ⍝ or
+    ⍝ <pre>(('sectionName' 'key1')('sectionName' 'key2'))</pre>
+    ⍝ or as
+    ⍝ <pre>'sectionName:key'</pre>
+    ⍝ or
+    ⍝ <pre>('sectionName:key1' 'sectionName:key2')</pre>
+    ⍝ Note, however, that mixed syntax is not supported:
+    ⍝ <pre>('sectionName' ('key1' 'key2')) ⍝  invalid!
+    ⍝ ('sectionName' 'key1') ''sectionName:key2' ⍝  invalid!</pre>
+    ⍝ If "key" is empty, <b>all</b> values of that sections are returned.
+    ⍝ If a requested value is not available, "default" (the left argument) _
+    ⍝ is returned if specified, otherwise the property "Default" is returned _
+    ⍝ if specified; otherwise an interrupt is signalled.
+      :Access Public
+      :If 0 1∊⍨≡name
+          (section key)←{∨/b←':'=⍵:⍵{((¯1+⍵)↑⍺)(⍵↓⍺)}b⍳1 ⋄ ⍵}name
+      :Else
+          (section key)←name
+      :EndIf
+      'Invalid syntax!'⎕SIGNAL 11/⍨∧/2=¨≡¨section key
+      :If ((⊂section)∊''⍬)∧(⊂key)∊''⍬
+          r←0 3⍴''
+          :For thisSection :In _SECTIONS
+              r⍪←(⊂thisSection),'' ''
+              r⍪←(⊂''),thisSection⍎'_Data[;1 2]'
+          :EndFor
+      :ElseIf (⊂key)∊''⍬
+          :If (1⊃⍴_Sections)≥where←(Uppercase _Sections)⍳Uppercase⊂section
+              r←(where⊃_SECTIONS)⍎'_Data[;1 2]'
+          :Else
+              6 ⎕SIGNAL⍨'Unknown: "',(⍕∊section),'"'
+          :EndIf
+      :Else
+          :If 0∊⍴section
+              r←↑⍪/{⍵{(⊂⍺),⍵._Data}⍎⍵}¨_Sections
+          :Else
+              row←(Uppercase _Sections)⍳⊂Uppercase section
+              :If (1⊃⍴_Sections)<row
+                  :If (1⊃⍴_Sections)≥where←(Uppercase _Sections)⍳Uppercase⊂section
+                      r←(Uppercase where⊃_Sections)⍎'_Data[;1 2]'
+                  :Else
+                      6 ⎕SIGNAL⍨'Unknown: "',(⍕∊section),'"'
+                  :EndIf
+              :EndIf
+              ref←⍎Uppercase this←row⊃_Sections
+              :If 0∊⍴key
+                  r←ref._Data
+              :Else
+                  key←{0 1∊⍨≡⍵:⊂⍵ ⋄ ⍵}key
+                  subRow←(Uppercase ref._Data[;1])⍳Uppercase key
+                  :If ∨/bool←(↑⍴ref._Data)<subRow
+                      :If 0=⎕NC'default'
+                          :If 0=⎕NC'Default'
+                              6 ⎕SIGNAL⍨'Value Error: "',(⊃{⍺,',',⍵}/bool/key),'"'
+                          :Else
+                              :Trap 6
+                                  r←(ref._Data[;2],⊂Default)[subRow]
+                              :Else
+                                  (1⊃⎕DM)⎕SIGNAL ⎕EN
+                              :EndTrap
+                          :EndIf
+                      :Else
+                          r←(ref._Data[;2],⊂default)[subRow]
+                      :EndIf
+                  :Else
+                      r←ref._Data[subRow;2]
+                  :EndIf
+              :EndIf
+          :EndIf
+      :EndIf
+      :If 2=⍴⍴r
+          :Select 2⊃⍴r
+          :Case 2
+              r⌿⍨←0<↑∘⍴¨r[;1]
+          :Case 3
+              r⌿⍨←0∨.≠⍨↑∘⍴¨r
+          :EndSelect
+      :EndIf
+    ∇
+
+    ∇ data Put name;key;SECTION;where;ref;KEYS;buffer;KEY;toc;section;key
+    ⍝ Set "name" to "data".
+    ⍝ Note that "name" can be:
+    ⍝ * Simple string. Must provide both, a "section" and a "name", _
+    ⍝ separated by a colon:  "section:key"
+    ⍝ * A nested vector of length 2
+    ⍝ Examples for the latter:
+    ⍝ <pre>1⊃name ←→ section name </pre> _
+    ⍝ <pre> 2⊃name ←→ key (or entry name)</pre>
+      :Access Public
+      :If 0 1∊⍨≡name
+          'Must be specified as "sectionName:key"'⎕SIGNAL 11/⍨~':'∊name
+          (section key)←{a←⍵⍳':' ⋄ (⍵↑⍨a-1)(a↓⍵)}name
+      :Else
+          (section key)←name
+      :EndIf
+      (SECTION KEY)←Uppercase(section key)
+      :If (⊂SECTION)∊_SECTIONS
+          where←_SECTIONS⍳⊂SECTION
+      :Else
+          _Sections,←⊂section
+          where←⍴_Sections
+      :EndIf
+      :If 9=⎕NC where⊃_SECTIONS
+          ref←⍎SECTION
+      :Else
+          6 ⎕SIGNAL⍨'Section unkown: ',SECTION,' (consider executing "AddSection")'
+      :EndIf
+      KEYS←Uppercase ref._Data[;1]
+      :If (⎕DR data)∊11 83 645
+          buffer←data(⍕data)
+      :Else
+          :If 2=≡data
+              buffer←({ReplaceCurlies KEYS ⍵}¨data)({'''',⍵,''''}¨,data)
+          :Else
+              buffer←(ReplaceCurlies KEYS data)('''',data,'''')
+          :EndIf
+      :EndIf
+      :If (⊂Uppercase key)∊KEYS
+          where←KEYS⍳⊂Uppercase key
+          :If ~_changed
+              _changed←data≢2⊃ref._Data[where;]
+          :EndIf
+          ref._Data[where;2 3]←buffer
+      :Else
+          ref._Data,[1]←(⊂key),buffer,⊂''
+      :EndIf
+    ∇
+
+    ∇ {r}←Delete name;section;key;ref;toc;bool;this
+      :Access Public
+    ⍝ Delete a key or a section. Returns 1 if there was something to delete.
+    ⍝ To delete "myKey" from "MySection":
+    ⍝ <pre>('MySection' 'MyKey')</pre>
+    ⍝ "name" can also be a nested vector:
+    ⍝ <pre>(('SectionA' 'key1') ('SectionA' 'key2'))</pre>
+    ⍝ or a full name like:
+    ⍝ <pre>('section:key') or (('section:key1') ('section:key1'))</pre>
+    ⍝ Note that ('section' ('key1' 'key2')) is <b>not</b> a valid syntax.
+    ⍝ To delete an entire section:
+    ⍝ <pre>Delete 'foo:'</pre>
+    ⍝ If "name" is a vector of names, "Delete" calls itself recursively.
+    ⍝ Mixed syntax is <b>not</b> supported, so use one of:
+    ⍝ <pre>Delete ('sectiona' 'key1')('otherSection' 'key2')('thirdSection' '')
+    ⍝ Delete ('sectiona:key1' 'otherSection:key2' 'thirdSection:')</pre>
+      r←0
+      :If 0 1∊⍨≡name
+          'Invalid right argument'⎕SIGNAL 11/⍨1≠':'+.=name
+          (section key)←' '~¨⍨2↑Uppercase{⍵⊂⍨':'≠⍵}name
+          :If 0∊⍴key
+              :If 9=⎕NC section
+                  ⎕EX section
+                  _Sections←(_SECTIONS≢¨⊂section)/_Sections
+                  r←_changed←1
+              :EndIf
+          :Else
+              key←{⍵∧.=' ':'' ⋄ ⍵}key
+              (section key)←Uppercase{⍵⊂⍨':'≠⍵}name
+              :If (⊂section)∊_SECTIONS
+              :AndIf r←0<+/bool←(⊂key)≡¨toc←Uppercase{⍵._Data[;1]}ref←⍎section
+                  ref._Data⌿⍨←~bool
+                  r←_changed←1
+              :EndIf
+          :EndIf
+      :Else
+          :If 0 1∊⍨≡2⊃name
+              :If 2=≡name
+              :AndIf ~':'∊1⊃,name
+                  r←Delete⊃{⍺,':',⍵}/name
+              :Else
+                  r←Delete¨name
+              :EndIf
+          :Else
+              :If 3=≡name
+              :AndIf 1 2≡≡¨name
+                  r←Delete¨(⊂name[1]),¨⊂¨2⊃name
+              :Else
+                  r←⍬
+                  :For this :In name
+                      r,←Delete this
+                  :EndFor
+              :EndIf
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ r←Exist name;section;key;ref;this
+      :Access Public
+    ⍝ Returns 1 if "name" exists. "name" can be either a nested vector like _
+    ⍝ <pre>('Section' 'key')</pre>
+    ⍝ or
+    ⍝ <pre>(('Section' 'key1') ('Section' 'key2'))</pre>
+    ⍝ or a full name like
+    ⍝ <pre>('section:key')</pre>
+    ⍝  or
+    ⍝ <pre>(('section:key1') ('section:key1'))</pre>
+    ⍝ Note that ('section' ('key1' 'key2')) is NOT a valid syntax.
+    ⍝ To check the existence of a section, use
+    ⍝ <pre>Exist 'foo:'</pre>
+    ⍝ If "name" is a vector of names, "Exist" calls itself recursively.
+    ⍝ Mixed syntax is NOT supported, so use one of:
+    ⍝ <pre>Exist ('section' 'key1')('otherSection' 'key2')('thirdSection' '')
+    ⍝ Exist ('section:key1' 'otherSection:key2' 'thirdSection:')</pre>
+      :If 0 1∊⍨≡name
+          (section key)←' '~¨⍨Uppercase 2↑{⍵⊂⍨':'≠⍵}name
+          :If 0∊⍴key
+              r←↑9=⎕NC section
+          :Else
+              key←{⍵∧.=' ':'' ⋄ ⍵}key
+              :If 0∊⍴key
+                  r←(⊂section)∊_SECTIONS
+              :Else
+                  :If r←(⊂section)∊_SECTIONS
+                      ref←⍎section
+                      r←(⊂key)∊Uppercase ref._Data[;1]
+                  :EndIf
+              :EndIf
+          :EndIf
+      :Else
+          :If ∧/':'∊¨name
+              r←Exist¨name
+          :Else
+              :If 3=≡name
+                  'Mixed syntax not eligible'⎕SIGNAL 11/⍨(∨/':'∊¨name)∧(∨/2=≡¨name)
+                  r←Exist¨name
+              :Else
+                  r←Exist⊃{⍺,':',⍵}/name
+              :EndIf
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ {r}←AddSection name;NAME;ref
+ ⍝ Adds a new section to the INI file.
+ ⍝ r gets 1 if a section was added. If it's 0, the section already exists!
+      :Access Public
+      NAME←Uppercase name
+      :If r←0=⎕NC NAME
+          NAME ⎕NS''
+          ref←⍎NAME
+          ref._Data←0 4⍴''
+          _Sections,←⊂NAME
+          _changed←1
+      :EndIf
+    ∇
+
+    ∇ {oldFilename}←Save filename;thisSection;thisKey;thisData;ref;buffer;origValue;THISSECTION;thisRemark;data;bool;where;i;this
+      :Access Public
+    ⍝ If "filename" is empty, the INI is saved to the same file it originally came from
+      oldFilename←_IniFilename
+      :If ~0∊⍴filename
+          _IniFilename←filename
+      :EndIf
+      _IniFilename←CheckExtension _IniFilename
+      :If 0=⎕NC'locals'
+      :OrIf 0∊⍴locals
+          data←⍬
+      :Else
+          bool←∧\0=↑∘⍴¨locals[;1]
+          data←'; '∘,¨{⍵↓¨⍨+/∧\' '=⊃⍵}⊃¨bool⌿locals[;4]
+          :For thisKey thisData origValue thisRemark :In ↓(~bool)⌿locals
+              buffer←(thisKey{0∊⍴⍺:⍺ ⋄ ⍺,⍵}'='),{0=1↑0⍴⍵:⍕⍵ ⋄ '''',(DoubleQuotes ⍵),''''}thisData
+              :If ~0∊⍴thisRemark
+                  buffer,←thisKey{⍵,⍨(~0∊⍴⍺)/⎕AV[10]}'; ',thisRemark
+              :EndIf
+              data,←⊂buffer
+          :EndFor
+      :EndIf
+      :For thisSection :In _Sections
+          THISSECTION←Uppercase thisSection
+          ref←⍎THISSECTION
+          :If 0=⎕NC'ref.generalRemarks'  ⍝ might not exist if the original filename was empty
+              data,←⊂'[',THISSECTION,']'
+          :Else
+              data,←⊂'[',THISSECTION,']',{⍵,⍨(~0∊⍴⍵)/⎕AV[10],'; '}1⊃1↑ref.generalRemarks
+              data,←{⍵,⍨(~0∊⍴⍵)/'; '}¨1↓ref.generalRemarks
+          :EndIf
+          :For thisKey thisData origValue thisRemark :In ↓ref._Data
+              buffer←''
+              :If 0 1∊⍨≡thisData
+                  :If '{'∊origValue
+                      buffer←thisKey,'=''',(DoubleQuotes⍎origValue),''''
+                  :Else
+                      buffer←(thisKey{0∊⍴⍺:⍺ ⋄ ⍺,⍵}'='),{0=1↑0⍴⍵:⍕⍵ ⋄ '''',(DoubleQuotes ⍵),''''}thisData
+                  :EndIf
+                  :If ~0∊⍴thisRemark
+                      buffer,←thisKey{⍵,⍨(~0∊⍴⍺)/⎕AV[10]}'; ',thisRemark
+                  :EndIf
+                  data,←⊂buffer
+              :Else
+             ⍝buffer←(⊂thisKey,'='''''),((⍴thisData)⍴⊂thisKey,',='),¨{0=1↑0⍴⍵:⍕⍵ ⋄ '''',(DoubleQuotes ⍵),''''}¨⍎¨origValue
+                  buffer←(⊂thisKey,'='''''),(⊂thisKey,',='),¨{0=1↑0⍴⍵:⍕⍵ ⋄ '''',(DoubleQuotes ⍵),''''}¨⍎¨origValue
+                  :If ~0∊⍴thisRemark
+                      buffer,¨←{⍵,⍨(~0∊⍴⍵)/⎕AV[10],'; '}¨thisRemark
+                  :EndIf
+                  data,←buffer
+              :EndIf
+          :EndFor
+      :EndFor
+      bool←(';'≠↑¨1⍴¨data)∧⎕AV[10]∊¨data
+      where←bool\{⍵⍳⎕AV[10]}¨bool/data
+      buffer←⎕AV[10]⍴¨⍨{⍵-⍨⌈/1+⍵}⌊4÷⍨↑∘⍴¨(where-1)↑¨data
+      :For i :In ⍳⍴data
+          :If i⊃bool
+              this←i⊃data
+              this[where[i]]←⊂i⊃buffer
+              this←∊this
+              (i⊃data)←this
+          :EndIf
+      :EndFor
+      WriteUtf8File _IniFilename data
+    ∇
+
+    ∇ {r}←DeleteDefault
+    ⍝ As soon as the "Default" property is set, one can get rid of it only be calling _
+    ⍝ this method. "r" gets 1 only if there was a default.
+      :Access Public
+      r←2=⎕NC'_default'
+      ⎕EX'_default'
+    ∇
+
+    ∇ r←Help
+      :Access Public shared
+      r←''
+      r,←⊂'To provide a list of methods and properties, use'
+      r,←⊂'  #.ADOC.List ',⍕⎕THIS
+      r,←⊂'To provide a full list of methods and properties, use'
+      r,←⊂'  ''full'' #.ADOC.List ',⍕⎕THIS
+      r,←⊂'To provide a fully-fledged documentation, use'
+      r,←⊂'  #.ADOC.Browse ',⍕⎕THIS
+      r←⊃r
+    ∇
+
+      fixkeys←{0 1∊⍨≡⍵:,⊂⍵
+          ⍵}
+
+    IsChar←{0 2∊⍨10|⎕DR ⍵}
+
+    ∇ r←{extension}CheckExtension r
+    ⍝ Add extension if there is no extension. Default is "ini"
+      extension←{2=⎕NC ⍵:⍎⍵ ⋄ 'ini'}'extension'
+      r←r,(~'.'∊{⍵↑⍨-⌊/'\/'⍳⍨⌽⍵}r)/'.',extension
+    ∇
+
+    ∇ r←_SECTIONS
+      r←Uppercase _Sections
+    ∇
+
+    ∇ value←ReplaceCurlies(toc value);bool;val2;where;name
+    ⍝ Replace "{foo}" with real data, if there are any curlies
+      :If ∧/'{}'∊value
+          :Trap 0
+              bool←{{⍵∨≠\⍵}⍵∊'{}'}value
+              where←(Uppercase toc)⍳⊂name←'{}'~⍨Uppercase bool/value
+              :If (⍴toc)<where
+                  where←(Uppercase locals[;1])⍳⊂name
+                  'Invalid references found in INI file'⎕SIGNAL 6/⍨(1⊃⍴locals)<where
+                  val2←2⊃locals[where;]
+              :Else
+                  val2←2⊃ref._Data[where;]
+              :EndIf
+          :Else
+              val2←''
+          :EndTrap
+          (bool/value)←(⊂DoubleQuotes val2),(¯1++/bool)⍴⊂''
+          value←∊value
+      :EndIf
+    ∇
+
+      DoubleQuotes←{
+          1<≡⍵:∇¨⍵
+          ∨/b←''''=⍵:b{w←⍵ ⋄ (b/w)←⊂'''''' ⋄ ∊w}⍵
+          ⍵
+      }
+    ∇ (data locals allRemarks)←GetLocals(data allRemarks);where;toc;i;name;value;remark;data2;allRemarks2;value2;itemNo;ref
+⍝ Extract any "local variabels".
+⍝ Locals are defined as those assigned above the first section
+      locals←0 4⍴⍬
+      :If 0<where←¯1+'['⍳⍨↑¨data
+          data2←where↑data
+          allRemarks2←where↑allRemarks
+          data2←'='Split¨data2
+          toc←' '~¨⍨1⊃¨data2
+          data2←2⊃¨{2↑⍵,'' ''}¨data2
+          :For i :In ⍳⍴toc
+              name←i⊃toc
+              value←i⊃data2
+              remark←i⊃allRemarks2
+              :If 0∊⍴name
+                  locals⍪←⍬ ⍬ ⍬ remark
+              :Else
+                  :If ∧/'{}'∊value
+                      value2←⍎ReplaceCurlies(toc value)
+                  :Else
+                      value2←⍎value
+                  :EndIf
+                  itemNo←(Uppercase locals[;1])⍳⊂Uppercase name~','
+                  :If itemNo>1⊃⍴locals
+                      locals⍪←name value2 value remark
+                  :ElseIf ','∊name
+                      911 ⎕SIGNAL⍨'Invalid syntax: nested values are not supported for "local" variables'
+                  :Else
+                      locals[itemNo;2 3 4]←value2 value remark
+                  :EndIf
+              :EndIf
+          :EndFor
+          locals[;4]←{2=≡⍵:⊃,/⍵ ⋄ ⍵}¨locals[;4]
+          data←where↓data
+          allRemarks←where↓allRemarks
+      :EndIf
+    ∇
+:EndClass ⍝ IniFiles

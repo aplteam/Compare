@@ -1,0 +1,802 @@
+:Class WinFile
+⍝ Provides information about files and directories without using any .NET stuff.
+⍝ Many methods (Dir+DirX for example) are MUCH faster than the .NET stuff.
+⍝ The class contains only shared methods.
+⍝ All methods threw exceptions in case of an error.
+⍝ Kai Jaeger ⋄ APL Team Ltd
+
+    ⎕io←1 ⋄   ⎕ML←3
+
+    :Include APLTeamUtils
+
+    ∇ r←Version
+      :Access Public shared
+      r←'1.2.7' '2008-12-19'
+    ∇
+
+    ∇ R←{noSplit}ReadAnsiFile filename;No;Size
+ ⍝ Read contents as chars. File is tied in shared mode.
+      :Access Public Shared
+      noSplit←{0<⎕NC ⍵:⍎⍵ ⋄ 0}'noSplit'
+      No←filename ⎕NTIE 0,66
+      Size←⎕NSIZE No
+      R←⎕NREAD No,82,Size,0
+      ⎕NUNTIE No
+      :If ~noSplit
+          :If 0<+/⎕AV[4 3]⍷R
+              R←Split R
+          :ElseIf ⎕AV[3]∊R
+              R←⎕AV[3]Split R
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ Data WriteAnsiFile filename;No;CrLf
+    ⍝ Data must be a string or a vtv. If file already exists it is replaced
+      :Access Public Shared
+      CrLf←⎕TC[2 3]
+      :Trap 22
+          No←filename ⎕NTIE 0
+          filename ⎕NERASE No
+      :EndTrap
+      No←filename ⎕NCREATE 0
+      :Select ≡Data
+      :Case 0
+          Data←Data,CrLf
+      :Case 1
+          :If 2=⍴⍴Data
+              Data←Data,((↑⍴Data),2)⍴CrLf
+          :EndIf
+      :Case 2
+          Data←∊Data,¨⊂CrLf
+      :Else
+          11 ⎕SIGNAL'Domain Error: check data'
+      :EndSelect
+      Data ⎕NAPPEND No
+      ⎕NUNTIE No
+    ∇
+
+    ∇ R←Cd Name;Rc;∆GetCurrentDirectory;∆SetCurrentDirectory
+    ⍝ Report/change the current directory
+      :Access Public Shared
+      '∆GetCurrentDirectory'⎕NA'I4 KERNEL32.C32|GetCurrentDirectory',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >T[]'
+      '∆SetCurrentDirectory'⎕NA'I4 KERNEL32.C32|SetCurrentDirectory',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T'
+      :If 0=↑Rc←∆GetCurrentDirectory 260 260
+          R←GetLastError'GetCurrentDirectory error' ''
+      :Else
+          R←↑↑/Rc
+      :EndIf
+      :If ~0∊⍴Name←∊Name
+      :AndIf ' '=1↑0⍴Name
+          Name,←(~'\/'∊⍨¯1↑Name)/'\'
+          :If ~∆SetCurrentDirectory⊂Name
+              11 ⎕SIGNAL⍨⊃{⍵,'; rc=',⍕⍺}/GetLastError'SetCurrentDirectory error'
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ Source CopyTo Target;∆CopyFile
+    ⍝ Copy "Source" to "Target"
+      :Access Public Shared
+      '∆CopyFile'⎕NA'I kernel32.C32|CopyFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T <0T I'
+      :If '\'=¯1↑Target
+          Target,←1↓Source↑⍨-'\'⍳⍨⌽Source
+      :EndIf
+      :If 0=∆CopyFile(Source Target),0
+          11 ⎕SIGNAL⍨'Copy File error; rc=',⍕GetLastError
+      :EndIf
+    ∇
+
+    ∇ {Bool}←Delete Filename;Bool;i;a;∆DeleteFile
+⍝ Delete a file
+⍝ Note that the explicit result tells you whether the file to be deleted exists or not. _
+⍝ It does <b>not</b> tell you whether the delete operation was successful or not. _
+⍝ This is not a bug in "WinFile", it is what the underlying Windows API function _
+⍝ is returning. If you need to be sure that the file in question really got deleted, _
+⍝ use #.WinFile.DoesExistFile to find out.
+      :Access Public Shared
+      '∆DeleteFile'⎕NA'I kernel32.C32|DeleteFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T'
+      :If (≡Filename)∊0 1
+          Filename←,⊂Filename
+      :EndIf
+      Bool←1⍴⍨⍴Filename←,Filename
+      :For i :In ⍳⍴Bool
+          (i⊃Bool)←0≠∆DeleteFile Filename[i]
+      :EndFor
+    ∇
+
+    ∇ R←{NewFlag}CheckPath Path;This;Volume;Path_2;Points;i;Rc;Hint
+    ⍝ Returns a 1 if the path to be checked is fine. If the path does not exist but _
+    ⍝ the left argument is "CREATE!", it will be created.
+      :Access Public Shared
+      R←0
+      (('/'=Path)/Path)←'\'
+      :If '\'=¯1↑Path
+          Path←¯1↓Path
+      :EndIf
+      :If 1=DoesExistDir Path
+          R←1 ⍝ Complete Path exist, get out!
+      :Else
+          NewFlag←{6::'' ⋄ Uppercase⍎⍵}'NewFlag'
+          NewFlag←'CREATE!'≡NewFlag
+          Points←+\'\'=Path
+          i←2 ⍝ not 1, since we are under windows and Path is fully qualified!
+          :Repeat
+              Path_2←Path/⍨Points<i
+              :If 0=DoesExistDir Path_2
+              :AndIf NewFlag
+                  :Trap 0
+                      MkDir Path_2
+                      R←1
+                  :Else
+                      11 ⎕SIGNAL⍨'Error during create directory; rc=',⎕EN
+                  :EndTrap
+              :Else
+                  R←0
+              :EndIf
+          :Until (1+⌈/Points)<i←i+1
+      :EndIf
+    ∇
+
+    ∇ R←{Type}DateOf FileNames;Rc;Hint;Length;WIN32_FIND_DATA;∆FindClose;handle;Buffer;Attr;This;ok;⎕IO;∆FileTimeToLocalFileTime;∆FileTimeToSystemTime;∆FindNextFile
+      :Access Public Shared
+      ⍝ "Type" may be one of: "Creation Time", "Last Access", "Last Write" (default!), "All"
+      :If 0=⎕NC'Type'
+          Type←'Last Write' ⍝ establish the default
+      :EndIf
+      :If 0 1∊⍨≡FileNames
+          FileNames←⊂FileNames
+      :EndIf
+      WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+      '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >',WIN32_FIND_DATA
+      '∆FindNextFile'⎕NA'U4 kernel32.C32|FindNextFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >',WIN32_FIND_DATA
+      '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      '∆FileTimeToLocalFileTime'⎕NA'I4 kernel32.C32|FileTimeToLocalFileTime <{I4 I4} >{I4 I4}'
+      '∆FileTimeToSystemTime'⎕NA'I4 kernel32.C32|FileTimeToSystemTime <{I4 I4} >{I2 I2 I2 I2 I2 I2 I2 I2}'
+      Attr←''
+      :For This :In FileNames
+          (handle Buffer)←FindFirstFile This
+          :If 0=handle
+              R←¯1
+              :Return
+          :Else
+              Attr,←⊂Buffer
+          :EndIf
+      :EndFor
+      ok←∆FindClose handle
+      Attr←⊂[1]⊃Attr
+      Length←⍴Type←Uppercase,Type
+      Attr←Attr[2 3 4]
+      :Select Type
+      :Case Length↑'LAST WRITE'
+          R←Filetime_to_TS¨3⊃Attr
+      :Case Length↑'LAST ACCESS'
+          R←Filetime_to_TS¨2⊃Attr
+      :Case Length↑'CREATION TIME'
+          R←Filetime_to_TS¨1⊃Attr
+      :Case Length↑'ALL'
+          R←Filetime_to_TS¨¨Attr
+      :Else
+          'Invalid left argument'⎕SIGNAL 13
+      :EndSelect
+      :If Type≢'ALL'
+          :If 1=⍴,FileNames
+              R←↑R
+          :Else
+              R←⊃R
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ R←{parms}Dir Path;Handle;next;ok;⎕IO;Buffer;i;∆FindClose;WIN32_FIND_DATA;∆RECURSIVE;allowed;folders;more;rc;More;Block;∆FindFirstFile;∆FindNextFile
+    ⍝ List the contents of a given directory, by default the current one.
+    ⍝ Passing "Recursive" as left argument to list all sub-directories, too.
+      :Access Public Shared
+      ⎕IO←1
+      WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+      '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >',WIN32_FIND_DATA
+      '∆FindNextFile'⎕NA'U4 kernel32.C32|FindNextFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >',WIN32_FIND_DATA
+      '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      ∆RECURSIVE←0
+      parms←{6::'' ⋄ ⍎⍵}'parms'
+      :If ~0∊⍴parms
+          allowed←,⊂'recursive'
+          'Invalid left argument'⎕SIGNAL(0∊⍴parms←CheckParms parms allowed)/11
+          'Invalid left argument'⎕SIGNAL(0∊⍴parms←GetVarsFromParms parms)/11
+      :EndIf
+      R←''
+      Buffer←''
+      :If ':\'∊⍨¯1↑Path
+          Path,←'\*'
+      :EndIf
+      (Handle Buffer)←FindFirstFile Path
+      :If 0≠Handle
+          ⎕IO←0
+          Buffer←,⊂6⊃Buffer
+          i←0
+          :Repeat
+              (ok More Block)←ReadBlock(Handle 500 Path)
+              :If 1=ok
+                  :If ~0∊⍴Block
+                      Buffer,←Block
+                  :Else
+                      :Leave
+                  :EndIf
+              :Else
+                  . ⍝ deal with serious errors!
+              :EndIf
+          :Until 0
+          ok←∆FindClose Handle
+          ⎕IO←1
+          R←Buffer
+     ∆Recursive:
+          :If ∆RECURSIVE
+              folders←'RECURSIVE'ListDirsOnly{⍵↓⍨1+-'\'⍳⍨⌽⍵}Path
+              :If 0∊⍴Buffer←(⊂{⍵↓⍨1+-'\'⍳⍨⌽⍵}Path),¨folders,¨⊂{⍵↑⍨-'\'⍳⍨⌽⍵}Path
+              :OrIf 0∊⍴Buffer←Dir¨Buffer
+                  :Return
+              :EndIf
+              Buffer←{⍵~,¨'..' '.'}¨Buffer
+              Buffer←⊃,/(⊂¨folders,¨'\'),¨¨Buffer
+              R,←Buffer
+              R←{⍵[⎕AV⍋⊃⍵]}R
+          :EndIf
+      :ElseIf 2=GetLastError
+          R←''
+          :GoTo ∆Recursive
+      :Else
+          11 ⎕SIGNAL⍨'Path not found: "',Path,'"'
+      :EndIf
+    ∇
+
+    ∇ R←{Parms}DirX Path;handle;next;ok;attrs;Buffer;it;WIN32_FIND_DATA;∆NOOF;Allowed;Bool;∆RECURSIVE;Trash;DirFlag;Buffer2;Rc;Hint;Data;ThisPath;Buffer3;Where;a;∆FILETIME;∆FileTimeToLocalFileTime;∆FileTimeToSystemTime;folders;more;rc;⎕IO;path2;U4
+    ⍝ List the contents of a given directory, by default the current one.
+    ⍝ Passing "Recursive" as left argument to list all sub-directories, too.
+    ⍝ By default, long names as well as short names together with file properties are _
+    ⍝ returned but no timestamps. If you are in need for timestamps, specify _
+    ⍝ ('FileTime' 1) as left argument. You can restrict the number of files returned _
+    ⍝ by specifying ('NoOf' {anyNumber}).
+      :Access Public Shared
+      ⎕IO←1
+      ∆NOOF←⌊/⍳0
+      ∆RECURSIVE←0
+      ∆FILETIME←0   ⍝ If you need a filetime, set this to 1; however, without FileTime, DirX is *much* faster!
+      :If ~0∊⍴,Parms←{6::'' ⋄ ⍎⍵}'Parms'
+          Allowed←'NoOf' 'Recursive' 'FileTime'
+          Parms←CheckParms(Parms Allowed)
+          :If 0∊⍴Parms
+              'Invalid Parameters'⎕SIGNAL 11
+          :EndIf
+          Trash←GetVarsFromParms Parms
+      :EndIf
+      '∆FileTimeToLocalFileTime'⎕NA'I4 kernel32.C32|FileTimeToLocalFileTime <{I4 I4} >{I4 I4}'
+      '∆FileTimeToSystemTime'⎕NA'I4 kernel32.C32|FileTimeToSystemTime <{I4 I4} >{I2 I2 I2 I2 I2 I2 I2 I2}'
+      :If 3∨.≠⎕NC⊃'∆FindFirstFile' '∆FindNextFile' '∆FindClose'
+          WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+          ⎕SHADOW⊃'∆FindFirstFile' '∆FindNextFile' '∆FindClose'
+          '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >',WIN32_FIND_DATA
+          '∆FindNextFile'⎕NA'U4 kernel32.C32|FindNextFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >',WIN32_FIND_DATA
+          '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      :EndIf
+      R←0 38⍴' '
+      :Select ↑¯1↑Path
+      :Case '\'
+          Path,←'*'
+      :Case ':'
+          Path,←'\*'
+      :EndSelect
+      (handle Buffer)←FindFirstFile Path
+      :If 0=handle
+          :If ~':'∊Path
+              Path←(Cd''),'\',Path
+          :EndIf
+          :If DoesExistFile{'\'∊⍵:⍵↓⍨-'\'⍳⍨⌽⍵ ⋄ ⍵}Path
+              :If ∆RECURSIVE
+                  :If 0∊⍴folders←ListDirsOnly{⍵↓⍨1+-'\'⍳⍨⌽⍵}Path
+                      :Return
+                  :EndIf
+                  Buffer←('Recursive' 1)∘DirX¨({⍵{(⍵↓⍺)(⍵↑⍺)}1+-'\'⍳⍨⌽⍵}Path)∘{(1⊃⍺),⍵,'\',2⊃⍺}¨folders
+                  rc←1⊃¨Buffer
+                  :If 0∨.≠rc
+                      R←1((2⊃¨Buffer)/⍨0≠.≠rc)(0 38⍴'')
+                      :Return
+                  :EndIf
+                  :If ~0∊⍴Buffer←3⊃¨Buffer
+                  :AndIf ~0∊⍴Buffer←(0<↑∘⍴¨Buffer)⌿Buffer
+                      R←↑⍪/Buffer
+                  :EndIf
+              :EndIf
+          :Else
+              11 ⎕SIGNAL⍨'Path not found: "',Path,'"'
+          :EndIf
+      :Else
+          Buffer←,⊂Buffer
+          :If 0=⎕NC'∆NOOF'
+              ∆NOOF←⌊⌊/⍳0
+          :EndIf
+          ⎕IO←0
+          :Repeat
+              (ok More Block)←ReadBlockX(handle 250 Path)
+              :If 1=ok
+                  :If ~0∊⍴Block
+                      Buffer,←Block
+                  :Else
+                      :Leave
+                  :EndIf
+              :Else
+                  . ⍝ deal with serious errors!
+              :EndIf
+          :Until 0
+          ⎕EX'Block'
+          ok←∆FindClose handle
+          Buffer←⊃Buffer
+          :If ∆FILETIME
+              Buffer[;1]←Filetime_to_TS¨Buffer[;1]
+              Buffer[;2]←Filetime_to_TS Each Buffer[;2] ⍝ Because this contains potentially many copies
+              Buffer[;3]←Filetime_to_TS¨Buffer[;3]
+          :Else
+              Buffer[;1 2 3]←⊂7⍴0
+          :EndIf
+          Buffer[;4]←0(2*32)⊥⍉⊃Buffer[;4]            ⍝ combine size elements
+          Buffer←⊂[0]Buffer
+          (1⊃Buffer)←⊃1⊃Buffer
+          (2⊃Buffer)←⊃2⊃Buffer
+          (3⊃Buffer)←⊃3⊃Buffer
+          Buffer/⍨←5≠⍳8                                   ⍝ bin the reserved elements
+          attrs←0⊃Buffer
+          Buffer←Buffer[5 6 4 1 2 3]
+          Bool←2=↑∘⍴∘⍴¨Buffer
+          (Bool/Buffer)←⊂[1]¨Bool/Buffer
+          Buffer←⍉⊃Buffer
+          Buffer,←⍉attrs
+          Buffer←Buffer[;(⍳6)],⊃Buffer[;6]
+          :If ∆NOOF≤↑⍴R←Buffer
+              R←∆NOOF↑[0]R
+              :Return
+          :EndIf
+          :If ∆RECURSIVE
+              :If 0∊⍴folders←ListDirsOnly{⍵↓⍨-'\'⍳⍨⌽⍵}Path
+                  :Return
+              :EndIf
+              :If ~0∊⍴folders
+                  Buffer2←(⊂('Recursive' 1)('NoOf'∆NOOF)('FileTime'∆FILETIME))DirX¨path2←(({⍵↓⍨-'\'⍳⍨⌽⍵}Path)∘,¨folders),¨⊂'\',{⍵↑⍨-'\'⍳⍨⌽⍵}Path
+                  Buffer2←{⍵⌿⍨~⍵[;0]∊,¨'.' '..'}¨Buffer2
+                  Buffer2←folders{w←⍵ ⋄ name←(⊂⍺,'\'),¨w[;0] ⋄ w[;0]←name ⋄ w}¨Buffer2
+              :AndIf ~0∊⍴Buffer2←(0<↑∘⍴¨Buffer2)/Buffer2
+                  :If ~0∊⍴Buffer2←↑⍪/(0<↑∘⍴¨Buffer2)/Buffer2
+                      Buffer⍪←Buffer2
+                  :EndIf
+              :EndIf
+          :EndIf
+          :If ∆NOOF≤↑⍴R←Buffer
+              R←∆NOOF↑[0]R
+          :EndIf
+      :EndIf
+    ∇
+
+    ∇ r←{NewFlag}DoesExistDir Path;buffer
+      :Access Public Shared
+      r←0
+      :Trap 0
+          :If 0 1∊⍨≡Path
+              :If ~0∊⍴buffer←DirX Path
+              :AndIf 34⊃,buffer
+                  r←1
+              :EndIf
+          :Else
+              r←DoesExistDir¨Path
+          :EndIf
+      :EndTrap
+    ∇
+
+    ∇ Bool←DoesExistFile Filename;Buffer;Handle;i;NoOf;This;∆FindClose;WIN32_FIND_DATA;∆FindFirstFile
+    ⍝ Returns 1 if the file exist, otherwise 0. Note that if "Filename" exists but _
+    ⍝ is a directory, a 0 is returned.
+      :Access Public Shared
+      WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+      '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >',WIN32_FIND_DATA
+      '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      :If 2=⍴⍴Filename
+          Filename←⊂[2]Filename
+      :EndIf
+      :If (≡Filename)∊0 1
+          Filename←,⊂,Filename
+      :EndIf
+      NoOf←⍴Filename←,Filename
+      Filename←{⍵/⍨~(a←∧\' '=⍵)∨⌽∧\' '=⌽⍵}¨Filename
+      Bool←NoOf⍴0
+      :For i :In ⍳NoOf
+          This←(-+/∧\(⌽This)∊'/\')↓This←i⊃Filename
+          :If 0≠Handle←↑FindFirstFile This
+              (i⊃Bool)←1
+              Buffer←∆FindClose Handle
+          :EndIf
+      :EndFor
+      :For i :In {⍵/⍳⍴⍵}Bool
+          Bool[i]∧←~34⊃,DirX i⊃Filename
+      :EndFor
+    ∇
+
+    ∇ R←GetAllDrives;Values;Drives;∆GetLogicalDriveStrings
+    ⍝ Return a vtv with the names of all files, for example:  "C:\"
+      :Access Public Shared
+      '∆GetLogicalDriveStrings'⎕NA'U4 KERNEL32.C32|GetLogicalDriveStrings',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' U4 >T[]'
+      Values←∆GetLogicalDriveStrings 255 255
+      Drives←⊂(↑Values)↑(⎕IO+1)⊃Values
+      R←((~⎕AV[⎕IO]=∊Drives)⊂∊Drives)
+    ∇
+
+    ∇ R←GetDriveAndType;AllDrives;Txt;Types;∆GetDriveType
+     ⍝ Return a matrix with the names and the types of all files.
+     ⍝ The number of rows is defined by the number of drives found.
+     ⍝ "Types" may be somthing like "Fixed", "CD-ROM", "Removable", "Remote"
+      :Access Public Shared
+      '∆GetDriveType'⎕NA'U4 KERNEL32.C32|GetDriveType',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T'
+      Types←∆GetDriveType∘⊂¨AllDrives←GetAllDrives
+      Txt←'Invalid Path' 'Removable' 'Fixed' 'Remote' 'CD-ROM' 'Ram-Disk'
+      R←AllDrives,Types,[1.5](Txt,⊂'Unknown')[(0,⍨⍳⍴Txt)⍳Types]
+    ∇
+
+    ∇ R←{PrefixString}GetTempFileName PathName;VOID;Rc;Hint;∆GetTempFileName
+      ⍝ Returns the name of an unused temporary filename. If "PathName" _
+      ⍝ is empty, the default temp path is taken. This means you can _
+      ⍝ overwrite this by specifying a path.
+      ⍝ "PrefixString", if defined, is a leading string of the filename _
+      ⍝ going to be generated. This is <b>not</b> the same as
+      ⍝ <pre>'pref',GetTempFileName ''</pre>
+      ⍝ because specified as left argument it is taken into account _
+      ⍝ when the uniquness of the created filename is tested.
+      :Access Public Shared
+      '∆GetTempFileName'⎕NA'I4 KERNEL32.C32|GetTempFileName',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T <0T I4 >0T'
+      PrefixString←{0<⎕NC ⍵:⍎⍵ ⋄ ''}'PrefixString'
+      R←0 '' ''
+      :If 0∊⍴PathName
+          :Trap 0
+              PathName←GetTempPath
+          :Else
+              11 ⎕SIGNAL⍨'Cannot get a temp path; rc=',⍕⎕EN
+          :EndTrap
+      :EndIf
+      :Trap 0
+          :If 0=Rc←'Create!'CheckPath PathName
+              11 ⎕SIGNAL⍨'Error during "Create <',PathName,'>"; rc=',⍕GetLastError
+          :Else
+              R←2⊃∆GetTempFileName PathName PrefixString 0 260
+              :If 0∊⍴,3⊃R
+                  11 ⎕SIGNAL⍨'Error during "Get Temp Filename"; rc=',⍕GetLastError
+              :EndIf
+          :EndIf
+      :Else
+          ⎕DM ⎕SIGNAL ⎕EN
+      :EndTrap
+    ∇
+
+    ∇ R←GetTempPath;Path;∆GetTempPath
+    ⍝ Returns the name of the path to the temporary files on your system.
+      :Access Public Shared
+      '∆GetTempPath'⎕NA'I4 KERNEL32.C32|GetTempPath',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >T[]'
+      Path←↑↑/∆GetTempPath 260 260
+      :If ~0∊⍴Path
+          R←Path
+      :Else
+          11 ⎕SIGNAL⍨'Problem getting Windows temp path!; rc=',⍕GetLastError
+      :EndIf
+    ∇
+
+    ∇ R←IsDirEmpty Pathes;Handle;next;ok;Buffer;i;Path;∆FindClose;WIN32_FIND_DATA;∆FindFirstFile;∆FindNextFile
+    ⍝ Returns 1 if empty, 0 if not and ¯1 if the directory could not be found
+      :Access Public Shared
+      WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {I4 I4} {I4 I4} T[260] T[14]}'
+      '∆FindFirstFile'⎕NA'I4 kernel32.C32|FindFirstFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T >',WIN32_FIND_DATA
+      '∆FindNextFile'⎕NA'U4 kernel32.C32|FindNextFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' I4 >',WIN32_FIND_DATA
+      '∆FindClose'⎕NA'kernel32.C32|FindClose I4'
+      :If 2≠≡Pathes
+          Pathes←,⊂Pathes
+      :EndIf
+      R←⍬
+      :For Path :In Pathes
+          Path,←'\'/⍨'\'≠¯1↑Path
+          :If ~∨/Path∊'*?'
+              Path←Path,'*'
+          :EndIf
+          (Handle Buffer)←FindFirstFile Path
+          :If 0≠Handle
+              (ok next)←FindNextFile Handle
+              :If 1=ok
+                  (ok next)←FindNextFile Handle
+                  R,←0 18≡ok next
+              :Else
+                  R←¯1
+              :EndIf
+              ok←∆FindClose Handle
+          :Else
+              R,←¯1
+          :EndIf
+      :EndFor
+    ∇
+
+    ∇ R←Source YoungerThan Target;TS_1;TS_2
+      :Access Public Shared
+     ⍝ Compare the "last changed at" timestamp accordingly
+      :Trap 0
+          TS_1←('FileTime' 1)DirX Source
+      :Else
+          11 ⎕SIGNAL⍨{⎕ML←3 ⋄ 1↓∊⎕TC[2],¨⍵}⎕DM
+      :EndTrap
+      :Trap 0
+          TS_2←('FileTime' 1)DirX Target
+      :Else
+          11 ⎕SIGNAL⍨{⎕ML←3 ⋄ 1↓∊⎕TC[2],¨⍵}⎕DM
+      :EndTrap
+      TS_1←6⊃TS_1[1;]
+      TS_2←6⊃TS_2[1;]
+      :If =/R←100⊥¨¯1↓¨TS_1 TS_2
+          R←↑</¯1↑¨TS_1 TS_2
+      :Else
+          R←</R
+      :EndIf
+    ∇
+
+    ∇ R←{Recursive}ListDirsOnly Path;Rc;ErrHint;Buffer;Buffer_2;This;Hint;⎕IO;Return;recursiveFlag
+    ⍝ Returns a list with all directories in "Path". Can be asked for sub-directories by _
+    ⍝ specifying "recursive" as left argument.
+      :Access Public Shared
+      ⎕IO←1
+      R←''
+      Recursive←{6::'' ⋄ Uppercase⍎⍵}'Recursive'
+      recursiveFlag←Recursive≡'RECURSIVE'
+      :If ~0∊⍴,Path
+          Path,←'\'/⍨'\'≠¯1↑Path
+      :EndIf
+      :If recursiveFlag
+          Buffer←('Recursive' 1)DirX Path
+      :Else
+          Buffer←DirX Path
+      :EndIf
+      Buffer←(~Buffer[;1]∊,¨'..' '.')⌿Buffer
+      R←Buffer[;1]⌿⍨Buffer[;34]
+    ∇
+
+    ∇ MkDir Name;∆CreateDirectory
+    ⍝ Make a new directory
+      :Access Public Shared
+      '∆CreateDirectory'⎕NA'I4 KERNEL32.C32|CreateDirectory',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T <{I4 I4 I4}'
+      :If 1=≡Name←∊Name
+      :AndIf ' '=1↑0⍴Name
+          :If ~R←∆CreateDirectory Name(0 0 0)
+              11 ⎕SIGNAL⍨'Error during create directory; rc=',⍕GetLastError
+          :EndIf
+      :Else
+          11 ⎕SIGNAL⍨'Invalid argument'
+      :EndIf
+    ∇
+
+∇ Source MoveTo Target;CurrDir;Rc;Hint;SourceDrive;TargetDrive;Rc;Hint;rc;∆MoveFileEx;∆MoveFile
+  ⍝ Move "Source" to "Target"
+ :Access Public Shared
+ '∆MoveFileEx'⎕NA'I kernel32.C32|MoveFileEx',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T <0T I4'
+ '∆MoveFile'⎕NA'I Kernel32.C32|MoveFile',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T <0T'
+ :Trap 0
+     CurrDir←Cd''
+     :If ∨/'*?'∊Source,Target
+         .
+     :Else
+         SourceDrive←TargetDrive←''
+         (('/'=Source)/Source)←'\'
+         (('/'=Target)/Target)←'\'
+         :If '\\'≢2↑Source
+             :If ':'∊Source
+                 SourceDrive←Source↑⍨¯1+Source⍳':'
+             :Else
+                 SourceDrive←CurrDir↑⍨¯1+CurrDir⍳':'
+                 Source,⍨←CurrDir,'\'
+             :EndIf
+             SourceDrive←{('abcdefghijklmnopqrstuvwxyz',⎕AV)[(⎕A,⎕AV)⍳⍵]}SourceDrive
+         :EndIf
+         :If '\\'≢2↑Target
+             :If ':'∊Target
+                 TargetDrive←Target↑⍨¯1+Target⍳':'
+             :Else
+                 TargetDrive←CurrDir↑⍨¯1+CurrDir⍳':'
+                 Target,⍨←CurrDir,'\'
+             :EndIf
+             :If '\'=¯1↑Target
+             :AndIf '\'≠¯1↑Source
+                 Target,←1↓Source↑⍨-'\'⍳⍨⌽Source
+             :EndIf
+             TargetDrive←{('abcdefghijklmnopqrstuvwxyz',⎕AV)[(⎕A,⎕AV)⍳⍵]}TargetDrive
+         :EndIf
+         :If SourceDrive≢TargetDrive
+         :AndIf '\'=¯1↑Source
+             '"MoveTo" cannot move directories on different drives'⎕SIGNAL 11
+         :Else
+             :If 0=∆MoveFileEx(Source Target),3       ⍝ 3=REPLACE_EXISTING (1) + COPY_ALLOWED (2)
+                 ⎕EN ⎕SIGNAL⍨'MoveFile error; rc=',⍕GetLastError
+             :EndIf
+         :EndIf
+     :EndIf
+ :Else
+     ⎕EN ⎕SIGNAL⍨{⎕ML←3 ⋄ 1↓∊⎕TC[2],¨⍵}⎕DM
+ :EndTrap
+∇
+
+    ∇ {(r more)}←{Recursive}RmDir Name;RecursiveFlag;List;Hint;Rc;DirList;this;∆RemoveDirectory;bool
+⍝ Removes a directory and it's contents. If the recursive flag is true, all _
+⍝ sub-directories are deleted as well.
+⍝ Since this operation might fail simply because another user is just looking _
+⍝ into one of the directories going to be deleted, a boolean value is returned _
+⍝ indicating success (0) or failure (positive error indicating the problem). _
+⍝ As a second result "more" is returned
+      :Access Public Shared
+      'Invalid right argument: empty!'⎕SIGNAL 11/⍨0∊⍴Name
+      '∆RemoveDirectory'⎕NA'I4 KERNEL32.C32|RemoveDirectory',('*A'⊃⍨1+12>{⍎⍵↑⍨¯1+⍵⍳'.'}2⊃'.'⎕WG'APLVersion'),' <0T'
+      r←0 ⋄ more←''
+      Recursive←{2=⎕NC ⍵:⍎⍵ ⋄ ''}'Recursive'
+      RecursiveFlag←'RECURSIVE'≡Recursive←Uppercase Recursive
+      :If 1=≡Name←∊Name
+      :AndIf ' '=1↑0⍴Name
+          :If DoesExistDir Name
+              :If RecursiveFlag
+                  :Trap 0
+                      List←DirX Name,'\*.*'
+                  :Else
+                      11 ⎕SIGNAL⍨'Cannot get list from "',Name,'"'
+                  :EndTrap
+                  List←{⍵↓⍨((,'..')≡,↑1↑1↓⍵)+(,'.')≡,↑1↑⍵}List[;1]
+                  :If ~0∊⍴,List←(⊂Name,'\'),¨List
+                      :Trap 0
+                          DirList←ListDirsOnly Name
+                      :Else
+                          11 ⎕SIGNAL'Cannot get list from "',Name,'"'
+                      :EndTrap
+                      DirList←(⊂Name,'\'),¨DirList
+                      :If ~0∊⍴,DirList
+                          :For this :In DirList
+                              (r more)←Recursive RmDir this
+                              :If 0<r
+                                  :Return
+                              :EndIf
+                          :EndFor
+                      :EndIf
+                      :If ~0∊⍴∊List←List~DirList
+                      :AndIf 0∊bool←Delete List
+                          →0,r←1
+                      :EndIf
+                  :EndIf
+              :EndIf
+              :If ~∆RemoveDirectory⊂Name
+                  r←{0<⍵:⍵ ⋄ 1}GetLastError
+                  more←'Could not remove: ',Name
+              :EndIf
+          :Else
+              more←'not found: "',Name,'"'
+          :EndIf
+      :Else
+          11 ⎕SIGNAL⍨'Invalid argument'
+      :EndIf
+    ∇
+
+⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝ Internal stuff ⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝
+    ∇ R←Uppercase What;uppercase;Upper;⎕IO
+      ⎕IO←1
+      Upper←⎕AV[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 256]
+      :If (≡What)∊0 1
+          R←Upper[⎕AV⍳,What]
+          R←(⍴What)⍴R
+      :Else
+          uppercase←{Upper[⎕AV⍳,⍵]}
+          R←(⍴¨What)⍴¨uppercase¨,¨What
+      :EndIf
+    ∇
+
+    ∇ r←Lowercase str;TOLOW
+      'TOLOW'⎕NA'I4 USER32.C32|CharLowerA =0T'
+      r←{0 1∊⍨≡⍵:{2=⍴⍴⍵:↑{2⊃TOLOW⊂⍵}¨↓⍵ ⋄ 2⊃TOLOW⊂⍵}⍵ ⋄ {2⊃TOLOW⊂⍵}¨⍵}str
+    ∇
+
+    ∇ rslt←FindFirstFile path;⎕IO
+      ⎕IO←0
+      :If ¯1=↑rslt←∆FindFirstFile path 0
+          rslt←0 GetLastError
+      :Else
+          (1 6⊃rslt)←FindTrim(1 6⊃rslt)        ⍝ shorten the file name at the null delimiter
+          (1 7⊃rslt)←FindTrim(1 7⊃rslt)        ⍝ and for the alternate name
+          (1 0⊃rslt)←(32⍴2)⊤1 0⊃rslt
+      :EndIf
+    ∇
+
+    ∇ rslt←Filetime_to_TS filetime;⎕IO;⎕ML
+      ⎕IO←0
+      ⎕ML←3
+      rslt←∆FileTimeToLocalFileTime filetime 0
+      :If 1≠↑rslt
+      :OrIf 1≠↑rslt←∆FileTimeToSystemTime(1⊃rslt)0
+          rslt←0 0                   ⍝ if either call failed then zero the time elements
+      :EndIf
+      rslt←1 1 0 1 1 1 1 1/1⊃rslt    ⍝ remove day of week
+    ∇
+
+      FindNextFile←{
+          1≠↑rslt←∆FindNextFile ⍵(⎕IO←0):0 GetLastError
+          (1 6⊃rslt)←FindTrim(1 6⊃rslt)   ⍝ shorten the filename
+          (1 7⊃rslt)←FindTrim(1 7⊃rslt)   ⍝ shorten the alternate name
+          rslt
+      }
+
+      FindTrim←{
+          ⍵↑⍨(⍵⍳↑⎕AV)-⎕IO
+      }
+
+
+    ∇ r←str Between what
+      r←{⍵∨≠\⍵}what∊str
+    ∇
+
+    ∇ R←GetLastError;∆GetLastError
+      '∆GetLastError'⎕NA'I4 kernel32.C32|GetLastError'
+      R←∆GetLastError
+    ∇
+
+    ∇ (ok more block)←ReadBlockX(handle noOfRecords path);i;next;rc
+      more←block←''
+      ok←1 ⍝ success
+      :For i :In ⍳noOfRecords
+          (rc next)←∆FindNextFile handle 0
+          :If 1=rc
+              block,←⊂next
+          :Else
+              :If 0≠↑rc
+              :AndIf ~(↑next)∊0 18
+                  ok←11
+                  more←'DirX error with: ',path
+                  :Trap 0
+                      {}∆FindClose handle
+                  :EndTrap
+                  ok←0 ⍝ failed
+                  :Return
+              :EndIf
+              :Leave
+          :EndIf
+      :EndFor
+      :If ~0∊⍴block
+          block←⊃block
+          block[;0]←↓,[0 1]⍉(32⍴2)⊤,[0.5]block[;0]
+          block[;6]←{⍵↑¨⍨+/∧\⎕AV[0]≠⊃⍵}block[;6]
+          block[;7]←{(↓⍵)↑¨⍨+/∧\⎕AV[0]≠⍵}{⍵⌽⍨+/∧\⎕AV[0]=⍵}⊃block[;7]
+          block←↓block
+      :EndIf
+    ∇
+
+    ∇ (ok more block)←ReadBlock(handle noOfRecords path);i;next;rc
+      more←block←''
+      ok←1 ⍝ success
+      :For i :In ⍳noOfRecords
+          (rc next)←∆FindNextFile handle 0
+          :If 1=rc
+              block,←⊂6⊃next
+          :Else
+              :If 0≠↑rc
+              :AndIf ~(↑next)∊0 18
+                  ok←11
+                  more←'DirX error with: ',path
+                  :Trap 0
+                      {}∆FindClose handle
+                  :EndTrap
+                  ok←0 ⍝ failed
+                  :Return
+              :EndIf
+              :Leave
+          :EndIf
+      :EndFor
+      :If ~0∊⍴block
+          block←(+/∧\⎕AV[0]≠⊃block)↑¨block
+      :EndIf
+    ∇
+
+    ∇ r←(fns Each)array;unique;result
+⍝ Fast "Each": applies "fns" on unique data tokens only
+      unique←∪array
+      result←fns¨unique
+      r←(⍴array)⍴result[unique⍳array]
+    ∇
+:EndClass ⍝ WinFile

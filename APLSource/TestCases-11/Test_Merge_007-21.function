@@ -1,0 +1,12 @@
+ R←Test_Merge_007(stopFlag batchFlag);buffer;⎕TRAP
+⍝ Exercise the "Compare.Merge" method on namespaces pretending via ⎕DF to be in #
+ R←∆Failed
+ ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
+
+⍝ Deal with the two namespaces DF_1 and DF2, both situated in #.DisplayFormatProblem
+⍝ However, DF_2 pretends to be in # via ⎕DF!
+
+ buffer←¯1 ##.Compare.Merge #.DisplayFormatProblem.DF_1 #.DisplayFormatProblem.DF_2
+ →PassesIf(1 10)(,0)≡⍴¨buffer
+
+ R←∆OK
