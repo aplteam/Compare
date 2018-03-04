@@ -17,7 +17,7 @@ There are three main functions:
 
 ### The function `Match` (inherited from `CompareSimple`)
 
-`Match` takes names of functions or operators or scripts and compares the source code. Note that taking the source code with ⎕CR or ⎕SRC and then ≡ them is not always going to work: white spaces as well as formatting problems might result in a 0 when the source code is in fact identical. Match deals with these problems properly.
+`Match` takes names of functions or operators or scripts and compares the source code. Note that taking the source code with `⎕CR` or `⎕SRC` and then ≡ them is not always going to work: white spaces as well as formatting problems might result in a 0 when the source code is in fact identical. Match deals with these problems properly.
 
 
 ### The function `These` (inherited from `CompareSimple`)
@@ -77,13 +77,13 @@ Although this method works "only" on (named!) namespaces one can effectively use
 The `Merge` method presents a GUI with all the information one needs to know in order to perform the merge. Note that all functions, operators and scripts that do equal are on the "=" tab while all the others are on the "≠" tab. Usually one is interested in the "≠" tab only:
 
 
-![](Images\Merger.png)
+![](Images/Merger.png)
 
 There are methods available that makes it easy to compare, modify, delete (either from the GUI or the workspace) and move functions, operators and scripts from one namespace to the other:
 
 
-![](Images\ContextMenu.png)
+![](Images/ContextMenu.png)
 
 With version 3.2 a "Rubbish report" was added. This report lists all sort of stuff that is by many considered to be something that should not be saved with a workspace. This is just an example: 
 
-![](Images\RubbishReport.png)
+![](Images/RubbishReport.png)
