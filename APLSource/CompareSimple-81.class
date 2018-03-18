@@ -1,4 +1,6 @@
 :Class CompareSimple
+
+
 ⍝ ## Overview
 
 ⍝ ### Comparing
@@ -39,36 +41,22 @@
 ⍝
 ⍝ Author: Kai Jaeger ⋄ APL Team Ltd
 ⍝
-⍝ Homepage: <http://aplwiki.com/CompareSimple>
+⍝ Homepage: <http://github.com/aplteam/CompareSimple>
 
     ⎕IO←1 ⋄ ⎕ML←3
 
-    :Include APLTreeUtils
+    :Include ##.APLTreeUtils
 
     ∇ r←Version
       :Access Public shared
-      r←('.'Last⍕⎕THIS)'2.1.2' '2017-09-??'
+      r←('.'Last⍕⎕THIS)'2.2.0' '2018-03-04'
     ∇
 
     ∇ History
       :Access Public shared
-      ⍝ * 2.1.2 
-      ⍝   * acre 3-related problem fixed.
-      ⍝ * 2.1.1
-      ⍝   * Some error messages in case of invalid parameters improved.
-      ⍝   * Some problems in test cases with the new acre 3 fixed.
-      ⍝ * 2.1.0
-      ⍝   * GUI improved when running from within `⎕SE`.
-      ⍝   * Some bugs fixed in connection with acre component files.
-      ⍝   * Supports both acre 2.x and acre 3.x.
-      ⍝   * Method `History` introduced.
-      ⍝ * 2.0.1
-      ⍝   * Fix for non-UTF8 files
-      ⍝ * 2.0.0
-      ⍝   * Requires at least Dyalog 15.0 Unicode.
-      ⍝   * Uses FilesAndDirs.OS rather than WinFile
-      ⍝ * 1.8.0
-      ⍝   * Documentation converted to Markdown (requires at least ADOC 5.0).
+      ⍝ * 2.2.0
+      ⍝   * First release on GitHub.
+      ⍝   * CompareSimple is now compatible with acre 4. Acre 2 and 3 are no longer supported.
     ∇
 
     :Field Public Shared regPathToCompareIt←'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Compare It!_is1\InstallLocation' ⍝ Where to start "CompareIt!" from
@@ -151,7 +139,6 @@
       r←⎕NS''
       r.readOnly1←0
       r.readOnly2←0
-      r.refToAcreInstance←FindAcreInstance
       r.alias1←''
       r.alias2←''
       r.refToUtils←{0::## ⋄ _refToUtils}⍬
@@ -162,14 +149,14 @@
       r.⎕FX'r←List;⎕io' '⎕IO←⎕ML←0' 'r←{(⍵,[.5]⎕nc¨⊂¨⍵),⍎¨⍵}(⊂''List'')~⍨⎕NL-2 9 3' ⍝ Vars, refs and niladic functions
     ∇
 
-    ∇ {changeFlag}←{parms}These y;ref1;ref2;b;l;compNo2;ref1IsRef;ref2IsRef;ref2Is_FN;ref1Is_FN;temp_FN1;compNo1;isSalt1;isSalt2;FN_1;fno1;range1;dates1;temp_FN2;buffer;ref1IsDcf;FN_2;fno2;range2;dates2;ref2IsDcf;file1;file2;saveDel1;saveDel2;body;bodies;lineNo;res;rc;G;cmd;f
+    ∇ {changeFlag}←{parms}These y;ref1;ref2;b;l;compNo2;ref1IsRef;ref2IsRef;ref2Is_FN;ref1Is_FN;temp_FN1;compNo1;isSalt1;isSalt2;FN_1;fno1;range1;dates1;temp_FN2;buffer;ref1IsDcf;FN_2;fno2;range2;dates2;ref2IsDcf;file2;saveDel1;saveDel2;body;bodies;lineNo;res;rc;G;cmd;f;file1
       :Access Public Shared
           ⍝ Compare two "things" with each other.
           ⍝
           ⍝ * Syntax I.: `(ref1 [ref2])←y`
           ⍝ * Syntax II.: `(name1 [name2])←y`
           ⍝ * Syntax III.: `(name ["file://",filename])←y`
-          ⍝ * Syntax IV.: Just one name or one ref (`[2]` is then `SALT_Data` or acre file)
+          ⍝ * Syntax IV.: Just one name or one ref (`[2]` is then `SALT_Data` or acre component file)
           ⍝
           ⍝ Note that any references must point to scripts. `These` cannot deal with
           ⍝ ordinary namespaces (refs or names, it doesn't matter); see `Compare.Merge`
@@ -275,10 +262,8 @@
                       ref2←'file://',⍕(GetRefToSaltNS⍎⍕ref1).SourceFile
                       readOnly2←1 ⍝ only this makes sense!
                   :Else
-                      :If 0<⎕SE.⎕NC'acre'                           ⍝ acre 3.x ?!
-                          ref2←{0∊⍴⍵:⍵ ⋄ (≡⍵)∊0 1:⍵ ⋄ ↑⍵}⎕SE.UCMD'acre.getchangefilename ',⍕ref1
-                      :ElseIf 0<#.⎕NC'acre'                         ⍝ acre 2.x ?!
-                          ref2←{0∊⍴⍵:⍵ ⋄ (≡⍵)∊0 1:⍵ ⋄ ↑⍵}#.acre.acre.GetChangeFileName⍕ref1
+                      :If 0<⎕SE.⎕NC'acre'                           ⍝ acre 3.x or 4.x ?!
+                          ref2←↑'changefile'⎕SE.acre._code.run⍕ref1
                       :Else
                           'Invalid right argument'⎕SIGNAL 11
                       :EndIf
@@ -293,10 +278,8 @@
                   :If  ⍝ Checks whether it is SALT managed
                       .  ⍝TODO⍝
                   :Else
-                      :If 0<#.⎕NC'acre'
-                          ref2←#.acre.acre.GetChangeFileName ref1
-                      :ElseIf 0<⎕SE.⎕NC'acre'
-                          ref2←⎕SE.UCMD'acre.getchangefilename ',ref1
+                      :If 0<⎕SE.⎕NC'acre'
+                          ref2←'changefile'⎕SE.acre._code,run ref1
                       :Else
                           'Invalid right argument'⎕SIGNAL 11
                       :EndIf
@@ -368,20 +351,21 @@
               :Trap 0
                   FN_2↓⍨←'file://'{(⍴⍺)×⍺≡(⍴⍺)↑⍵}FN_2
                   fno2←TieComponentFile FN_2
-                  range2←{¯1+⍵[1]+⍳|-/⍵}2↑⎕FSIZE fno2
+                  range2←¯1↓{¯1+⍵[1]+⍳|-/⍵}2↑⎕FSIZE fno2
                   dates2←fno2{⎕FRDCI ⍺,⍵}¨range2
                   dates2←FormatDateTime¨{date compidn 3⊃⍵}¨dates2
-                  :If 0∊⍴3⊃⎕FREAD fno2 1 ⍝ Then it's a new one - acre leaves the first empty.
-                      range2←1↓range2
-                  :EndIf
                   :If ¯1=×¯1↑G.componentNo
-                      compNo2←|¯1↑G.componentNo
+                      compNo2←|1+¯1↑G.componentNo
                       G.againFlag[2]←0
                   :Else
                       :If 0∊⍴,compNo2←fno2 DisplayList ref2 range2'Select component for comparison'compNo2({2=|⎕NC ⍵:⍎⍵ ⋄ ⍬}'G.componentNo')dates2
                           ⎕FUNTIE fno2
                           :Return
                       :EndIf
+                  :EndIf
+                  :If ~compNo2∊↑{(⍺-1)+⍳⍵-1}/2↑⎕FSIZE fno2
+                      ⎕FUNTIE fno2
+                      'Specified component does not exist'⎕SIGNAL 3
                   :EndIf
                   buffer←⎕FREAD fno2,compNo2
                   ⎕FUNTIE fno2
@@ -390,7 +374,7 @@
                   :If 0∊⍴temp_FN2
                       temp_FN2←G.refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
                   :EndIf
-                  WriteUtf8File temp_FN2(3⊃buffer)
+                  WriteUtf8File temp_FN2 buffer
               :Case 24
                   . ⍝ File tied????!
               :Else
@@ -399,6 +383,7 @@
                       ref2IsDcf←0
                       temp_FN2←''
                   :EndIf
+                  :Trap 0 ⋄ ⎕FUNTIE fno2 ⋄ :EndTrap
               :EndTrap
           :Else
               FN_2←WriteAplObjToFile ref2
@@ -449,8 +434,8 @@
           :Case 'CompareIt!'
               :If 0∊⍴G.reportFile
                   cmd←''
-                  cmd,←⊂file1
-                  cmd,←⊂file2
+                  cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file1
+                  cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file2
                   cmd,←⊂G.readOnly1∨(Is33 ref1)∨ref1IsDcf
                   cmd,←⊂G.readOnly2∨(Is33 ref2)∨ref2IsDcf
                   cmd,←⊂G.alias1,{~⍵:'' ⋄ ', component ',⍕compNo1}ref1IsDcf
@@ -459,16 +444,16 @@
                   changeFlag←~0∊¨↑∘⍴¨bodies←RunCompareIt cmd
               :Else
                   cmd←''
-                  cmd,←⊂file1
-                  cmd,←⊂file2
+                  cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file1
+                  cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file2
                   cmd,←⊂G.reportFile
                   G.converter RunCompareItReport cmd
               :EndIf
           :Case 'BeyondCompare'
               'Path to Beyond Compare is unknown'⎕SIGNAL 6/⍨0∊⍴pathToBeyondCompare
               cmd←''
-              cmd,←⊂file1
-              cmd,←⊂file2
+              cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file1
+              cmd,←⊂refToUtils.FilesAndDirs.NormalizePath file2
               cmd,←⊂G.readOnly1∨(Is33 ref1)∨ref1IsDcf
               cmd,←⊂G.readOnly2∨(Is33 ref2)∨ref2IsDcf
               cmd,←⊂G.alias1,{~⍵:'' ⋄ ', component ',⍕compNo1}ref1IsDcf
@@ -826,10 +811,10 @@
       :Access Public Shared
       parms←''
       parms,←⊂regPath,'\PathToBeyondCompare'    ⍝ Our own Registry key (if any)
-      ourRegKey←'HKEY_CURRENT_USER\Software\Scooter Software\Beyond Compare 3\ExePath' ⍝ The tool's Registry key (if any)
+      ourRegKey←'HKEY_CURRENT_USER\Software\Scooter Software\Beyond Compare 4\ExePath' ⍝ The tool's Registry key (if any)
       parms,←⊂ourRegKey
       parms,←⊂pathToBeyondCompare               ⍝ Path
-      parms,←⊂'Beyond Compare 3'                ⍝ The default location
+      parms,←⊂'Beyond Compare 4'                ⍝ The default location
       parms,←⊂'bcompare.exe'                    ⍝ The EXEs name
       parms,←⊂askUserFlag                       ⍝ Flag: shall be bother the user if we cannot work it out ourselves?
       parms,←⊂'Select BeyondCompare''s EXE:'    ⍝ Caption of the "File Select" dialog box
@@ -850,28 +835,21 @@
               path←refToUtils.WinReg.GetString vendorRegKey             ⍝ The vendor might have saved the path in the Registry
               :If 0∊⍴path                                               ⍝ No he didn't!
               :OrIf ~refToUtils.FilesAndDirs.Exists path                ⍝ Yes he did but the path is incorrect anyway
-                  :If 0<|⎕NC'refToAcreInstance'                         ⍝ Is acre around?!
-                  :AndIf ~0∊⍴refToAcreInstance                          ⍝ Check...
-                  :AndIf 2=|refToAcreInstance.⎕NC'comparewith'          ⍝ ...whether acre...
-                  :AndIf ~0∊⍴refToAcreInstance.comparewith              ⍝ ...is smarter than we are.
-                      path←refToAcreInstance.comparewith                ⍝ Take the path from acre
+                  path←(ExpandEnv'%ProgramFiles(x86)%'),'\',defaultLocation,'\',exeName ⍝ Standard location on a 64bit Windows
+                  :If refToUtils.FilesAndDirs.Exists path           ⍝ Is it available there?!
+                      path←'"',(path~'"'),'"'                       ⍝ Prepare proper path
                   :Else
-                      path←(ExpandEnv'%ProgramFiles(x86)%'),'\',defaultLocation,'\',exeName ⍝ Standard location on a 64bit Windows
-                      :If refToUtils.FilesAndDirs.Exists path           ⍝ Is it available there?!
-                          path←'"',(path~'"'),'"'                       ⍝ Prepare proper path
-                      :Else
-                          path←(ExpandEnv'%ProgramFiles%'),'\',defaultLocation,'\',exeName ⍝ Standard location on a 32bit Windows
-                          :If refToUtils.FilesAndDirs.Exists path
-                              path←'"',(path~'"'),'"'                   ⍝ Prepare proper path
-                          :ElseIf askUserFlag
-                              path←SelectFile caption exeName           ⍝ We are running out of options - ask user
-                          :EndIf
+                      path←(ExpandEnv'%ProgramFiles%'),'\',defaultLocation,'\',exeName ⍝ Standard location on a 32bit Windows
+                      :If refToUtils.FilesAndDirs.Exists path
+                          path←'"',(path~'"'),'"'                   ⍝ Prepare proper path
+                      :ElseIf askUserFlag
+                          path←SelectFile caption exeName           ⍝ We are running out of options - ask user
                       :EndIf
-                      flag←0∊⍴path                                      ⍝ The moron doesn't...
-                      flag∨←~refToUtils.FilesAndDirs.Exists path~'"'    ⍝ ...know either?!
-                      ('Cannot find ',exeName)⎕SIGNAL flag/6
-                      path←'"',(path~'"'),'"'                           ⍝ Prepare proper path
                   :EndIf
+                  flag←0∊⍴path                                      ⍝ The moron doesn't...
+                  flag∨←~refToUtils.FilesAndDirs.Exists path~'"'    ⍝ ...know either?!
+                  ('Cannot find ',exeName)⎕SIGNAL flag/6
+                  path←'"',(path~'"'),'"'                           ⍝ Prepare proper path
               :EndIf
           :EndIf
       :EndIf
@@ -956,17 +934,6 @@
 
     IsRef←{(0=≡⍵)∧⍵≢⍕⍵}                             ⍝ Used to identify references
     IsFile←{(∨/':/\'∊⍵)∨'file://'{⍺≡(⍴⍺)↑⍵}⍵}       ⍝ Used to identify filename
-
-    ∇ r←FindAcreInstance;list;bool
-     ⍝ Finds one single acre instance in #, if any. Returns ⍬ otherwise.
-      r←list←⍬
-      :If 0<⎕SE.⎕NC'acre' ⍝ acre 3.x ?!
-          list←⎕SE.UCMD'acre.getinstances'
-      :ElseIf 0<#.⎕NC'acre'
-          list←9 #.acre.GetInstances'')[;1]
-      :EndIf
-    ∇
-
 
     ∇ r←fno DisplayList(caption data info lastItemWas preSelect ts);∆;res;f;bool;⎕WX
       r←⍬
@@ -1176,15 +1143,13 @@
       :EndIf
     ∇
 
-    ∇ {r}←SetChanged name
+    ∇ {r}←SetChanged name;result
     ⍝ Tells acre that `name` got changed. Returns 1 when acre was found and 0 otherwise.
-      r←1
-      :If 0<⎕SE.⎕NC'acre'
-          {}⎕SE.UCMD'acre.SetChanged ',name
-      :ElseIf 0<#.⎕NC'acre'
-          {}#.acre.SetChanged name
-      :Else
-          r←0
+      :If r←0<⎕SE.⎕NC'acre'
+          result←⎕SE.UCMD'acre.SetChanged ',name,' [ messages←''off'' ]'
+          :If 0∊⍴result
+              ⎕←'Acre was told about the change (but wasn''t interested) of ',name
+          :EndIf
       :EndIf
     ∇
 
