@@ -51,11 +51,13 @@
 
     ∇ r←Version
       :Access Public shared
-      r←(Last⍕⎕THIS)'4.2.1' '2018-04-12'
+      r←(Last⍕⎕THIS)'4.2.2' '2018-11-24'
     ∇
 
     ∇ History
       :Access Public Shared
+      ⍝ * 4.2.2
+      ⍝   * In case more than 10 items are removed from the comparison GUI the question regards the number, not all items
       ⍝ * 4.2.1
       ⍝   * References to the APL wiki changed for GitHub.
       ⍝ * 4.2.0
@@ -177,7 +179,7 @@
           (name fnsVersion body)←⎕FREAD fno version
       :Else
           ⎕FUNTIE fno
-          11 ⎕SIGNAL⍨'File is not an acre'
+          11 ⎕SIGNAL⍨'File is not an acre file'
       :EndTrap
       body←{⍵⊂⍨⎕TC[2]≠⍵}body
       :If ' '≠1↑0⍴ln←(⍎{⍵↓⍨-'.'⍳⍨⌽⍵}name).⎕FX body
@@ -595,7 +597,7 @@
       :EndIf
     ∇
 
-    ∇ r←OnContextMenu msg;m;res;i2;filename1;i3;no1;no2;title1;body1;body2;title2;filename2;question;no;body;title;mm;cs
+    ∇ r←OnContextMenu msg;m;res;i2;filename1;i3;no1;no2;title1;body1;body2;title2;filename2;question;no;body;title;mm;cs;wanted
       r←0
       m←⎕NEW⊂'Menu'
       m.(i1←⎕NEW'MenuItem'(⊂'Caption' 'Compare selected'))
@@ -1519,7 +1521,11 @@
           ref←⍎objName
           row←refToDiff.GetRowById id
           name←row[;I.∆name]
-          question←(1↓⊃,/⎕TC[2],¨(⊂'Sure you want remove:'),((⊂'  '),¨name),⊂'from the list?')'' '(This action won''t change the workspace!)'
+          :If 10>≢name 
+              question←(1↓⊃,/(⎕UCS 10),¨(⊂'Sure you want remove:'),((⊂'  '),¨name),⊂'from the list?')'' '(This action won''t change the workspace!)'
+          :Else
+              question←1↓⊃,/(⎕UCS 10),¨('Sure you want remove ',(⍕≢name),' items from the list?')'' '(This action won''t change the workspace!)'
+          :EndIf
           :If 'Remove from list'YesOrNo question
               refToDiff.Remove id
               LastLine←1⌈1⊃{⍵/⍳⍴,⍵}{⍵.list.SelItems}⍎(1+⍴⍕⎕THIS)↓⍕FF.f.tc.T2.TabObj
@@ -1846,4 +1852,3 @@
 ⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝⍝ acre Helpers End
 
 :EndClass
-
