@@ -58,19 +58,8 @@
       :Access Public Shared
       ⍝ * 4.2.2
       ⍝   * In case more than 10 items are removed from the comparison GUI the question regards the number, not all items
-      ⍝ * 4.2.1
-      ⍝   * References to the APL wiki changed for GitHub.
-      ⍝ * 4.2.0
-      ⍝   * acre 4 compatible.
-      ⍝   * Converted from the APL wiki to GitHub.
-      ⍝ * 4.1.0
-      ⍝   * Method `History` changed.
-      ⍝   * Bug fix: `Version`
-      ⍝   * `Compare` is now managed by acre 3.
-      ⍝ * 4.0.0: Requires at least Dyalog 15.0 Unicode
-      ⍝ * 3.7.0: Documentation converted to Markdown.
-      ⍝ * 3.6.1: Bug fix in `Merge`.
-      ⍝ * 3.6.0: Version now returns just Compare (no path).
+      ⍝\\
+      ⍝ For information regarding older versions see <https://github.com/aplteam/Compare/releases>
     ∇
 
     ∇ r←Get_UUID
