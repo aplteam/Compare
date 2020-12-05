@@ -1,63 +1,55 @@
-:Class Compare: ##.CompareSimple
+:Class Compare: CompareSimple
 ⍝ ## Overview
-
 ⍝ ### Comparing
 ⍝ `Compare` offers a bunch of shared methods helpful to compare functions,
-⍝ operators and scripts. Sources of those objects may by in the current
-⍝ workspace or on file (SALT/script files or acre component files).
-⍝
+⍝ operators and scripts. Sources of those objects may live in the current
+⍝ workspace or on file (SALT/script files or acre component files).\\
 ⍝ It also comes with a method to process an array as it is returned by
 ⍝ acre's `Versions` method.
-
 ⍝ ### Restrictions
 ⍝ The `Merge` method worries about ordinary namespaces only. If you have
 ⍝ one of these in your workspace:
 ⍝ * Class instances
 ⍝ * Refs pointing to unnames namespaces
 ⍝ * Attached namespaces
-⍝
 ⍝ then any code in these is ignored. They will however be reported. This is
-⍝ because it is assumed that this kind of stuff should not lay around at at,
-⍝ therefore a warning is issued.
-⍝
+⍝ because it is assumed that this kind of stuff should not be around at all,
+⍝ therefore a warning is issued.\\
 ⍝ Note that you may have different views on whether references pointing to
 ⍝ unnamed namespaces should be considered temporary (used during runtime only).
-⍝ If you do then the report won't fit your taste, and you won't be happy that
+⍝ If you do then the report won't fit your needs, and you won't be happy that
 ⍝ `Compare` ignores all code found in such namespaces. You can however
 ⍝ change this by setting the `refsAreRubbish` flag to 0; this is the second
 ⍝ flag in the left argument of `Merge`.
-⍝
 ⍝ ### Merging
 ⍝ The class also offers methods to compare and even merge ordinary
 ⍝ namespaces. Since namespaces can hold everything, even a whole workspace,
 ⍝ this can effectively be used to compare and merge workpaces by copying
 ⍝ those workspaces into two namespaces and then compare the two of them.
-⍝
 ⍝ ### Size
 ⍝ If you are looking for a simple comparison tool then check CompareSimple
-⍝ first. `Compare` inherits from `CompareSimple`.
-⍝
+⍝ first. `Compare` inherits `CompareSimple`.
 ⍝ ## Comparison
 ⍝ The actual comparison can be done by one of the commercial products
-⍝ "CompareIt!" or "Beyond Compare".
-⍝
-⍝ Author: Kai Jaeger ⋄ APL Team Ltd ⋄ http://aplteam.com
-⍝
-⍝ Homepage: <http://aplwiki.com/Compare>
+⍝ "CompareIt!" or "Beyond Compare".\\
+⍝ Author: Kai Jaeger ⋄ APL Team Ltd ⋄ https://aplteam.com\\
+⍝ Homepage: <https://github.com/aplteam/Compare>
 
     ⎕IO←1 ⋄ ⎕ML←3
 
-    :Include ##.APLTreeUtils
-
     ∇ r←Version
       :Access Public shared
-      r←(Last⍕⎕THIS)'4.2.2' '2018-11-24'
+      r←'Compare' '5.0.0.14' '2020-11-19'
     ∇
 
     ∇ History
       :Access Public Shared
-      ⍝ * 4.2.2
-      ⍝   * In case more than 10 items are removed from the comparison GUI the question regards the number, not all items
+      ⍝ * 5.0.0
+      ⍝   * BREAKING CHANGES:
+      ⍝     * Requires Dyalog 18.0 Unicode
+      ⍝     * Requires all dependencies to be Tatin packages
+      ⍝     * Does not include `APLTreeUtils` anymore but does requires the class `APLTreeUtils2` to be a sibling
+      ⍝     * Property `refToUtils` removed: all dependencies must now be siblings of `Compare`
       ⍝\\
       ⍝ For information regarding older versions see <https://github.com/aplteam/Compare/releases>
     ∇
@@ -68,16 +60,6 @@
       ⍝ any other classes with the same name
       r←'{7B647151-E9A3-B54C-BAF7-7311E69DC8CC}'
     ∇
-
-    :Property refToUtils
-    :Access Public Shared
-        ∇ r←get
-          r←{0::## ⋄ _refToUtils}⍬
-        ∇
-        ∇ set arg
-          _refToUtils←arg.NewValue
-        ∇
-    :EndProperty
 
     ∇ {r}←{flags}Merge y;report;rubbishObjects1;rubbishObjects2;readOnly;refsAreRubbish;rubbishReport1;rubbishReport2;obj;rubbishReport;ref1;ref2;dropFromRubbish;reftoGui
       :Access Public Shared
@@ -170,7 +152,7 @@
           ⎕FUNTIE fno
           11 ⎕SIGNAL⍨'File is not an acre file'
       :EndTrap
-      body←{⍵⊂⍨⎕TC[2]≠⍵}body
+      body←{⍵⊂⍨⍵≠⎕UCS 10}body
       :If ' '≠1↑0⍴ln←(⍎{⍵↓⍨-'.'⍳⍨⌽⍵}name).⎕FX body
           ⎕←'Could not fix "',name,'", see line(s) ',⍕ln
       :Else
@@ -571,8 +553,8 @@
     ⍝ Ignore <tab> characters and blanks which are not enclosed by qoutes
     ⍝ before doing the comparison
       bool←1 ⍝ yes they differ
-      a←1↓⊃,/⎕TC[2],¨a
-      b←1↓⊃,/⎕TC[2],¨b
+      a←1↓⊃,/(⎕UCS 10),¨a
+      b←1↓⊃,/(⎕UCS 10),¨b
       between←{⍺←'''' ⋄ {⍵∨≠\⍵}⍺=⍵}
       b1←between a
       b2←between b
@@ -580,8 +562,8 @@
       :AndIf (b1/a)≡b2/b
           a←(~b1)/a
           b←(~b2)/b
-          a←a~' ',⎕AV[10]
-          b←b~' ',⎕AV[10]
+          a←a~' ',⎕UCS 9
+          b←b~' ',⎕UCS 9
           bool←a≢b
       :EndIf
     ∇
@@ -599,7 +581,7 @@
       m.i4.onSelect←1
       m.i4.no←4
      
-      :If ~0∊⍴res←m.Wait
+      :If 0≠≢res←m.Wait
           :Select ↑{⍵.no}1⊃res
           :Case 1
               :If 0∊+/¨f.sfTop.(right left).SelItems
@@ -612,10 +594,10 @@
                   title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
                   body2←4⊃no2⊃versions
                   title2←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no2;]
-                  filename1←refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-                  WriteUtf8File filename1 body1
-                  filename2←refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-                  WriteUtf8File filename2 body2
+                  filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+                  (⊂body)##.FilesAndDirs.NPUT filename1 1
+                  filename2←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+                  (⊂body)##.FilesAndDirs.NPUT filename2 1
                   RunCompareIt filename1 filename2 1 title1 title2
               :EndIf
           :Case 2
@@ -624,8 +606,8 @@
               no1←meta[;1]⍳wanted
               body1←4⊃no1⊃versions
               title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
-              filename1←refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-              WriteUtf8File filename1 body1
+              filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+              (⊂body)##.FilesAndDirs.NPUT filename1 1
               cs←CreateParmsFor_These
               cs.alias1←title1
               cs.alias2←name
@@ -635,7 +617,7 @@
               no←(⍎' f.sfTop.',({⍵.name}1⊃msg),'.SelItems')⍳1
               wanted←⍎no⊃⍎' f.sfTop.',({⍵.name}1⊃msg),'.Items'
               no←({⍎⍵↑⍨¯1+⍵⍳' '}¨{⍵↓⍨+/∧\' '=⍵}¨versions)⍳wanted
-              (body title)←(⎕UCS 13){⌽¨⍺ SplitPath⌽⍵}no⊃versions
+              (body title)←(⎕UCS 13){⌽¨⍺ ##.APLTreeUtils2.SplitPath⌽⍵}no⊃versions
               question←'Copy ',title,' to workspace?'
               :If 'Get version into workspace'YesOrNo question
                   .
@@ -656,7 +638,6 @@
     ⍝ is used from within "Compare" when the method Compare.DisplayDiff is
     ⍝ called.
         (⎕IO ⎕ML ⎕DIV)←1 0 1
-        :Include ##.##.APLTreeUtils
         ∆Caption←'Merge'
         ∆Hits←⍬
         ∆SearchFor←''
@@ -668,8 +649,8 @@
 
         ∇ Report;fn1;fn2;rf;rep;thisContainer;i;thisObj;body;thisFile;_;buf;title1;title2;A;F
         ⍝ Produces a report regarding the differnces with CompareIt!
-          A←##.refToUtils.APLTreeUtils
-          F←##.refToUtils.FilesAndDirs
+          A←##.APLTreeUtils2
+          F←##.FilesAndDirs
           fn1←F.GetTempFilename''
           fn2←F.GetTempFilename''
           rep←FF.f.tc.sf2.list.ReportInfo
@@ -690,9 +671,9 @@
                   :EndSelect
                   body←(⊂(10⍴'*'),' ',thisObj),body
                   :Trap 11
-                      'append'A.WriteUtf8File thisFile body
+                      (⊂body)##.FilesAndDirs.NPUT thisFile 2
                   :Else
-                      'append'A.WriteUtf8File thisFile(⊂'Could not write ',thisObj)
+                      (⊂'Could not write ',thisObj)##.FilesAndDirs.NPUT thisFile 2
                   :EndTrap
               :EndFor
           :EndFor
@@ -701,12 +682,12 @@
           :If 0<'1'+.=rep[;1]
               buf←⊂(10⍴'*'),' Found only in ',title1
               buf,←'#.'∘,¨('1'=rep[;1])⌿rep[;2]
-              'append'A.WriteUtf8File fn1 buf
+              (⊂buf)##.FilesAndDirs.NPUT fn1 2
           :EndIf
           :If 0<'2'+.=rep[;1]
               buf←⊂(10⍴'*'),' Found only in ',title2
               buf,←'#.'∘,¨('2'=rep[;1])⌿rep[;2]
-              'append'A.WriteUtf8File fn2 buf
+              (⊂buf)##.FilesAndDirs.NPUT fn2 2
           :EndIf
           ##.RunCompareIt fn1 fn2 1 1 title1 title2
         ∇
@@ -1085,7 +1066,7 @@
               ∆,←⊂'ReadOnly' 1
               ∆,←⊂'Font'n.Font
               ∆,←⊂'Style' 'Multi'
-              ∆,←⊂'Text'(dtb rubbish)
+              ∆,←⊂'Text'(##.##.APLTreeUtils2.DTB rubbish)
               ∆,←⊂'Event'(9999 1)
               ∆,←⊂'VScroll' ¯1
               n.Show←n.Form.⎕NEW'Edit'∆
@@ -1236,11 +1217,11 @@
           (objName Event ColNo Btn ShiftState)←5↑msg
           ref←⍎objName
           :If ShiftState=0 ⍝ ascent
-              sortIndex←⎕AV⍋{∧/∧/⍵∊⎕D,' ':⍵⌽⍨+/∧\' '≠⍵ ⋄ ⍵}↑ref.(Items,ReportInfo)[;ColNo]
+              sortIndex←⍋{∧/∧/⍵∊⎕D,' ':⍵⌽⍨+/∧\' '≠⍵ ⋄ ⍵}↑ref.(Items,ReportInfo)[;ColNo]
               ref.Items←ref.Items[sortIndex]
               ref.ReportInfo←ref.ReportInfo[sortIndex;]
           :ElseIf 2=ShiftState ⍝ descent
-              sortIndex←⎕AV⍒{∧/∧/⍵∊⎕D,' ':⍵⌽⍨+/∧\' '≠⍵ ⋄ ⍵}↑ref.(Items,ReportInfo)[;ColNo]
+              sortIndex←⍒{∧/∧/⍵∊⎕D,' ':⍵⌽⍨+/∧\' '≠⍵ ⋄ ⍵}↑ref.(Items,ReportInfo)[;ColNo]
               ref.Items←ref.Items[sortIndex]
               ref.ReportInfo←ref.ReportInfo[sortIndex;]
           :EndIf
@@ -1309,7 +1290,7 @@
           data←↑n.Show.Text
           data⌿⍨←data[;1]=' '           ⍝ Drop titles
           data←(data∨.='#')⌿data
-          ⎕←↑')ERASE '∘,¨↓dlb data
+          ⎕←↑')ERASE '∘,¨↓##.APLTreeUtils2.DLB data
         ∇
 
         ∇ OnHelp;ff;txt;myFnt
@@ -1493,7 +1474,7 @@
               listObj←{⍵.list}⍎{'FF.f.tc.sf',⍕⍵}⍎¯1↑⍕FF.f.tc.TabObj
               searchIn←{⍵.ReportInfo[;2 3 6 7]}listObj
               searchIn←(-2×ff.names.State)↓[2]searchIn
-              bool←∨/(Lowercase ∆SearchFor)⍷⎕FMT Lowercase searchIn
+              bool←∨/(⎕C ∆SearchFor)⍷⎕FMT ⎕C searchIn
               :If 0∊⍴∆Hits←bool/listObj.Items
                   ⎕EX'ff'
                   'ms'⎕WC'MsgBox' 'Compare: not hits'('Search string "',∆SearchFor,'" not found')
@@ -1510,7 +1491,7 @@
           ref←⍎objName
           row←refToDiff.GetRowById id
           name←row[;I.∆name]
-          :If 10>≢name 
+          :If 10>≢name
               question←(1↓⊃,/(⎕UCS 10),¨(⊂'Sure you want remove:'),((⊂'  '),¨name),⊂'from the list?')'' '(This action won''t change the workspace!)'
           :Else
               question←1↓⊃,/(⎕UCS 10),¨('Sure you want remove ',(⍕≢name),' items from the list?')'' '(This action won''t change the workspace!)'
@@ -1587,7 +1568,7 @@
           ref←⍎objName
           row←refToDiff.GetRowById id
           name←row[;I.∆name]
-          question←(1↓⊃,/⎕TC[2],¨(⊂'Sure you want mark as changed:'),((⊂'  '),¨name),⊂'?')
+          question←(1↓⊃,/(⎕UCS 10),¨(⊂'Sure you want mark as changed:'),((⊂'  '),¨name),⊂'?')
         ∇
 
         ∇ {r}←{caption}ShowMsg question;∆;ms
@@ -1614,10 +1595,10 @@
       title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
       body2←4⊃no2⊃versions
       title2←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no2;]
-      filename1←refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-      WriteUtf8File filename1 body1
-      filename2←refToUtils.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-      WriteUtf8File filename2 body2
+      filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+      (⊂body1)##.FilesAndDirs.NPUT filename1 1
+      filename2←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+      (⊂body)##.FilesAndDirs.NPUT filename2 1
       RunCompareIt filename1 filename2 1 title1 title2
     ∇
 
@@ -1629,56 +1610,6 @@
       ⍝ a ref to ⍵.SALT_Data if that is a namespace or
       ⍝ an empty vector.
       }
-
-    ∇ r←ReadUtf8File filename;fno;noOfBytes;bytes;⎕IO;⎕ML
-      ⎕IO←⎕ML←1
-      r←''
-      :Trap 22
-          fno←filename ⎕NTIE 0
-      :Else
-          ('Could not read file: ',filename)⎕SIGNAL ⎕EN
-      :EndTrap
-      noOfBytes←⎕NSIZE fno
-      bytes←⎕NREAD fno 83,noOfBytes
-      ⎕NUNTIE fno
-      ⍝ Make sure it is unsigned, and drop the UTF-8 marker bytes if present
-      bytes+←256×bytes<0
-      bytes↓⍨←3×239 187 191≡3↑bytes ⍝ drop a potential UTF-8 marker
-      r←'UTF-8'⎕UCS bytes
-      :If ∨/(⎕UCS 13 10)⍷r
-          r←Split r
-      :ElseIf ∨/r=⎕UCS 10
-          r←(⎕UCS 10)Split r
-      :EndIf
-    ∇
-
-    ∇ {append}WriteUtf8File(filename data);fno;fullname;flag;⎕ML;⎕IO
-     ⍝ Write UTF-8 "data" to "filename" (WITHOUT a BOM!)
-      ⎕IO←⎕ML←1
-      append←{2=⎕NC ⍵:⍎⍵ ⋄ 0}'append'
-      flag←0
-      :If ~0 1∊⍨≡data
-          data←⊃{⍺,(⎕UCS 13 10),⍵}/data
-      :EndIf
-      :Repeat
-          :Trap 19 22
-              fno←filename ⎕NTIE 0 17 ⍝ Open exclusively
-              filename ⎕NERASE fno
-              flag←1
-          :CaseList 19
-              ⎕DL 0.2
-          :Case 22
-              flag←1 ⍝ That's just fine
-          :Else
-              ⎕DM ⎕SIGNAL ⎕EN
-          :EndTrap
-      :Until flag
-      fno←filename ⎕NCREATE 0
-     ⍝ Enforce UTF-8
-      data←⎕UCS'UTF-8'⎕UCS data
-      data ⎕NAPPEND fno
-      ⎕NUNTIE fno
-    ∇
 
       MakeRelative←{
           path←⍕⍵
