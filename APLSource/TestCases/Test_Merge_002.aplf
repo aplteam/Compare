@@ -11,7 +11,7 @@
  rf1←⍎'Rubbish1'#.⎕NS''                     ⍝ The two things to be compared
  rf_←⍎'OrdinaryNamedNamespace'rf1.⎕NS''     ⍝ To be reported as empty only
  rf1.RefToOrdinaryNamedNamespace←rf_        ⍝ To be reported when refsAreRubbish←1
- rf1.MyLoggerInstance1←⎕NEW ##.Logger(,⊂'Tests\LogFiles\')  ⍝ A Class instance
+ rf1.MyLoggerInstance1←⎕NEW Logger(,⊂'Tests\LogFiles\')  ⍝ A Class instance
  rf1.RefToUnnamedNS1←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
  rf1.RefToUnnamedNS2←⎕NS''                  ⍝ To be reported when refsAreRubbish←1
  'Sub'rf1.RefToUnnamedNS2.⎕NS''             ⍝ Named sub-namespace in unnamed NS
@@ -19,7 +19,7 @@
  'SubNSWithCode'rf1.⎕NS''                   ⍝ We don't want to see this reported as rubbish: it's named & it contains sub-namespaces
  rf1.SubNSWithCode.Sub1WithCode←⎕NS''       ⍝ To be reported when refsAreRubbish←1
  rf1.SubNSWithCode.Sub1WithCode.⎕FX'r←Hello' 'r←''World'''
- rf1.MyLoggerInstance2←⎕NEW ##.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf1.MyLoggerInstance2←⎕NEW Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
  rf1.SubNSWithCode.CodeSub2←⎕NS''           ⍝ To be reported when refsAreRubbish←1
  rf1.SubNSWithCode.CodeSub2.⎕FIX':Class Test' '∇r←Hello' ':Access Public Shared' 'r←''World''' '∇' ':EndClass'
  rf1.SubNSWithCode.Empty←⎕NS''              ⍝ To be reported when refsAreRubbish←1
@@ -35,7 +35,7 @@
  rf1.RefToEmptyUnnamed2←rf1.ContainerB.⎕NS''⍝ To be reported when refsAreRubbish←1
  'ContainerB2'rfb.⎕NS''                     ⍝ Ordinary non-empty sub-namespace
  rfb.ContainerB2.⎕FX'r←ContainerB2_Hello' 'r←''World'''
- rf1.MyLoggerInstance3←⎕NEW ##.Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
+ rf1.MyLoggerInstance3←⎕NEW Logger(,⊂'Tests\LogFiles\')  ⍝ An instance
  rf_←⍎'HoldSubNamespaces'rf1.⎕NS''          ⍝ Named & not empty, therefore not reported
  'Sub1Empty'rf_.⎕NS''                       ⍝ Named and empty
  'Sub2NonEmpty'rf_.⎕NS''                    ⍝ Named and not empty
