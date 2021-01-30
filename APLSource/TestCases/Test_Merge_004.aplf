@@ -1,7 +1,7 @@
  R←Test_Merge_004(stopFlag batchFlag);⎕TRAP;rf1;rf2;∆;buffer
 ⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in both, [1] & [2] and "dropFromRubbish"
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
- R←∆Failed
+ R←T._Failed
 
 ⍝⍝⍝ Preperations
  #.⎕SHADOW¨'Rubbish1' 'Rubbish2'
@@ -15,9 +15,9 @@
 
 ⍝⍝⍝ Processing....
  buffer←¯1 ##.Compare.Merge rf1 rf2(⍴'#.Rubbish1.')
- →∆TidyUp×PassesIf 0 5≡⊃∘⍴¨buffer
+ →T.GoToTidyUp 0 5≢≢¨buffer
 
- R←∆OK
+ R←T._OK
 
 ∆TidyUp:
  rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

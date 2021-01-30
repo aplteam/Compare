@@ -1,7 +1,7 @@
  R←Test_Merge_001(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;rep2;rep1;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6;i;refToGui;bool
 ⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in both, [1] & [2]
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
- R←∆Failed
+ R←T._Failed
 
  Isolate←{{⍵↑⍨+/∧\~':'∊¨⍵}(⍺⍳⊂⍵)↓⍺}
  Match←{(∧/⍺∊⍵)∧(∧/⍵∊⍺)}
@@ -75,35 +75,35 @@
 
 ⍝⍝⍝ Checking
  rep←2⊃buffer
- →GoToTidyUp 0∊⍴rep
+ →T.GoToTidyUp 0∊⍴rep
  (rep1 rep2)←##.APLTreeUtils2.DLB¨1↓¨'#.'{⍵⊂⍨⍺∘≡¨(⍴⍺)↑¨⍵}rep
  expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
- →GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
+ →T.GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
  expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
- →GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
+ →T.GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
  expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
  expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
- →GoToTidyUp~expected3 Match rep1 Isolate'Namespace references:'
- →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2,expected3
+ →T.GoToTidyUp~expected3 Match rep1 Isolate'Namespace references:'
+ →T.GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2,expected3
 
  expected1←,⊂'#.Rubbish2.MyForm2'
- →GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
+ →T.GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
  expected2←,⊂'#.Rubbish2.MyForm'
- →GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
+ →T.GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
  expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
- →GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
+ →T.GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
  expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
- →GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
+ →T.GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
  expected5←,⊂'#.Rubbish2.Foo'
- →GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
+ →T.GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
  expected6←,⊂'#.Rubbish2.IF1'
- →GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
- →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
+ →T.GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
+ →T.GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
 
  refToGui←(3⊃buffer).f.tc.sf2.list
  bool←(refToGui.ReportInfo[;2])∊rf2.⎕NL-3 4 9.4 9.5  ⍝ All top level objects
- →GoToTidyUp 0≠+/⊃∘⍴¨bool/refToGui.ReportInfo[;3]
- →GoToTidyUp 0∊⊃∘⍴¨(~bool)/refToGui.ReportInfo[;3]
+ →T.GoToTidyUp 0≠+/⊃∘⍴¨bool/refToGui.ReportInfo[;3]
+ →T.GoToTidyUp 0∊⊃∘⍴¨(~bool)/refToGui.ReportInfo[;3]
 
  ⍝buffer←##.Compare.Merge rf1 rf2
  buffer←¯1 0 ##.Compare.Merge rf1 rf2
@@ -111,31 +111,31 @@
 
 ⍝⍝⍝ Checking
  rep←2⊃buffer
- →GoToTidyUp 0∊⍴rep
+ →T.GoToTidyUp 0∊⍴rep
  (rep1 rep2)←##.APLTreeUtils2.DLB¨1↓¨'#.'{⍵⊂⍨⍺∘≡¨(⍴⍺)↑¨⍵}rep
  expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
- →GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
+ →T.GoToTidyUp~expected1 Match rep1 Isolate'Empty Namespaces:'
  expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
- →GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
+ →T.GoToTidyUp~expected2 Match rep1 Isolate'Class Instances:'
  expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
  expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
- →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2
+ →T.GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep1)~expected1,expected2
 
  expected1←,⊂'#.Rubbish2.MyForm2'
- →GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
+ →T.GoToTidyUp~expected1 Match rep2 Isolate'GUI Instances with KeepOnClose=1:'
  expected2←,⊂'#.Rubbish2.MyForm'
- →GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
+ →T.GoToTidyUp~expected2 Match rep2 Isolate'Instances with code in attached namespace:'
  expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
- →GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
+ →T.GoToTidyUp~expected3 Match rep2 Isolate'Class Instances:'
  expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
- →GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
+ →T.GoToTidyUp~expected4 Match rep2 Isolate'Other Instances:'
  expected5←,⊂'#.Rubbish2.Foo'
- →GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
+ →T.GoToTidyUp~expected5 Match rep2 Isolate'Classes with code in attached namespace:'
  expected6←,⊂'#.Rubbish2.IF1'
- →GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
- →GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
+ →T.GoToTidyUp~expected6 Match rep2 Isolate'Interfaces with code in attached namespace:'
+ →T.GoToTidyUp~0∊⍴({⍵/⍨~':'∊¨⍵}rep2)~expected1,expected2,expected3,expected4,expected5,expected6
 
- R←∆OK
+ R←T._OK
 
 ∆TidyUp:
  rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

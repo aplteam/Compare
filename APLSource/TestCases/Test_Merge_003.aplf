@@ -1,7 +1,7 @@
  R←Test_Merge_003(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6
 ⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in [2] only.
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
- R←∆Failed
+ R←T._Failed
 
  Isolate←{{⍵↑⍨+/∧\~':'∊¨⍵}(⍺⍳⊂⍵)↓⍺}
  Match←{(∧/⍺∊⍵)∧(∧/⍵∊⍺)}
@@ -39,21 +39,21 @@
 
 ⍝⍝⍝ Checking
  rep←##.APLTreeUtils2.DLB 2⊃buffer
- →∆TidyUp×PassesIf~0∊⍴rep
+ →T.GoToTidyUp 0=≢rep
 
  expected1←,⊂'#.Rubbish2.MyForm2'
- →∆TidyUp×PassesIf expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
+ →T.GoToTidyUp~expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
  expected2←,⊂'#.Rubbish2.MyForm'
- →∆TidyUp×PassesIf expected2 Match rep Isolate'Instances with code in attached namespace:'
+ →T.GoToTidyUp~expected2 Match rep Isolate'Instances with code in attached namespace:'
  expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
- →∆TidyUp×PassesIf expected3 Match rep Isolate'Class Instances:'
+ →T.GoToTidyUp~expected3 Match rep Isolate'Class Instances:'
  expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
- →∆TidyUp×PassesIf expected4 Match rep Isolate'Other Instances:'
+ →T.GoToTidyUp~expected4 Match rep Isolate'Other Instances:'
  expected5←,⊂'#.Rubbish2.Foo'
- →∆TidyUp×PassesIf expected5 Match rep Isolate'Classes with code in attached namespace:'
+ →T.GoToTidyUp~expected5 Match rep Isolate'Classes with code in attached namespace:'
  expected6←,⊂'#.Rubbish2.IF1'
- →∆TidyUp×PassesIf expected6 Match rep Isolate'Interfaces with code in attached namespace:'
- →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
+ →T.GoToTidyUp~expected6 Match rep Isolate'Interfaces with code in attached namespace:'
+ →T.GoToTidyUp 0≠≢({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
 
  ⍝buffer←##.Compare.Merge rf1 rf2
  buffer←¯1 0 ##.Compare.Merge rf1 rf2
@@ -61,25 +61,25 @@
 
 ⍝⍝⍝ Checking
  rep←2⊃buffer
- →∆TidyUp×PassesIf~0∊⍴rep
+ →T.GoToTidyUp 0=≢rep
  rep←##.APLTreeUtils2.DLB 2⊃buffer
- →∆TidyUp×PassesIf~0∊⍴rep
+ →T.GoToTidyUp 0=≢rep
 
  expected1←,⊂'#.Rubbish2.MyForm2'
- →∆TidyUp×PassesIf expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
+ →T.GoToTidyUp~expected1 Match rep Isolate'GUI Instances with KeepOnClose=1:'
  expected2←,⊂'#.Rubbish2.MyForm'
- →∆TidyUp×PassesIf expected2 Match rep Isolate'Instances with code in attached namespace:'
+ →T.GoToTidyUp~expected2 Match rep Isolate'Instances with code in attached namespace:'
  expected3←'#.Rubbish2.MyLoggerInstance1' '#.Rubbish2.MyLoggerInstance2'
- →∆TidyUp×PassesIf expected3 Match rep Isolate'Class Instances:'
+ →T.GoToTidyUp~expected3 Match rep Isolate'Class Instances:'
  expected4←'#.Rubbish2.MyFormOK' '#.Rubbish2.TCPSocket0'
- →∆TidyUp×PassesIf expected4 Match rep Isolate'Other Instances:'
+ →T.GoToTidyUp~expected4 Match rep Isolate'Other Instances:'
  expected5←,⊂'#.Rubbish2.Foo'
- →∆TidyUp×PassesIf expected5 Match rep Isolate'Classes with code in attached namespace:'
+ →T.GoToTidyUp~expected5 Match rep Isolate'Classes with code in attached namespace:'
  expected6←,⊂'#.Rubbish2.IF1'
- →∆TidyUp×PassesIf expected6 Match rep Isolate'Interfaces with code in attached namespace:'
- →∆TidyUp×PassesIf 0∊⍴({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
+ →T.GoToTidyUp~expected6 Match rep Isolate'Interfaces with code in attached namespace:'
+ →T.GoToTidyUp 0≠≢({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3,expected4,expected5,expected6
 
- R←∆OK
+ R←T._OK
 
 ∆TidyUp:
  rf2.⎕EX¨'MyForm' 'MyFormOK' 'MyForm2' 'TCPSocket0'

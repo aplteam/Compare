@@ -39,7 +39,7 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '5.0.0.17' '2020-12-05'
+      r←'Compare' '5.0.0.18' '2020-12-05'
     ∇
 
     ∇ History
