@@ -1,6 +1,0 @@
-aplteam-APLTreeUtils2-1.1.0
-aplteam-Execute-3.0.1
-aplteam-Logger-5.0.0
-aplteam-FilesAndDirs-5.0.0
-aplteam-OS-3.0.0
-aplteam-WinReg-5.0.1
