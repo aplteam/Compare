@@ -30,20 +30,24 @@
 ⍝ If you are looking for a simple comparison tool then check CompareSimple
 ⍝ first. `Compare` inherits `CompareSimple`.
 ⍝ ## Comparison
-⍝ The actual comparison can be done by one of the commercial products
-⍝ "CompareIt!" or "Beyond Compare".\\
-⍝ Author: Kai Jaeger ⋄ APL Team Ltd ⋄ https://aplteam.com\\
+⍝ The actual comparison is left to the user command ]CompeFiles if available.
+⍝ If not the filenames are printed to the session.
+⍝ Author: Kai Jaeger
 ⍝ Homepage: <https://github.com/aplteam/Compare>
 
     ⎕IO←1 ⋄ ⎕ML←3
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '5.0.1+21' '2021-03-03'
+      r←'Compare' '6.0.0+23' '2022-09-19'
     ∇
 
     ∇ History
       :Access Public Shared
+      ⍝ * 6.0.0
+      ⍝   * BREAKING CHANGES:
+      ⍝     Does not call any comparison tools itself anymore (not even via CompareSimple)
+      ⍝     but tries to use ⎕se.CompareFiles or prints just the filenames to ⎕SE.
       ⍝ * 5.0.1
       ⍝   * Package config corrected
       ⍝ * 5.0.0
@@ -121,7 +125,6 @@
     ∇ {reftoGui}←DisplayDiff(diff readOnly versionNo rubbish)
     ⍝ Designed to display the result of `Merge`.
     ⍝ `readOnly` supresses everything that enables a user to change anything.\\
-    ⍝ `compareTool` must be "CompareIt!" or "Beyond Compare"
       (⎕IO ⎕ML)←1 3
       reftoGui←Display.Diff diff readOnly versionNo rubbish
     ∇
@@ -596,10 +599,10 @@
                   title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
                   body2←4⊃no2⊃versions
                   title2←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no2;]
-                  filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-                  (⊂body)##.FilesAndDirs.NPUT filename1 1
-                  filename2←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-                  (⊂body)##.FilesAndDirs.NPUT filename2 1
+                  filename1←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+                  (⊂body)F.NPUT filename1 1
+                  filename2←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+                  (⊂body)F.NPUT filename2 1
                   RunCompareIt filename1 filename2 1 title1 title2
               :EndIf
           :Case 2
@@ -608,8 +611,8 @@
               no1←meta[;1]⍳wanted
               body1←4⊃no1⊃versions
               title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
-              filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-              (⊂body)##.FilesAndDirs.NPUT filename1 1
+              filename1←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+              (⊂body)F.NPUT filename1 1
               cs←CreateParmsFor_These
               cs.alias1←title1
               cs.alias2←name
@@ -646,13 +649,12 @@
 
           OnReport←{
               Report
-        ⍝Done
           }
 
-        ∇ Report;fn1;fn2;rf;rep;thisContainer;i;thisObj;body;thisFile;_;buf;title1;title2;A;F
-        ⍝ Produces a report regarding the differnces with CompareIt!
-          A←##.APLTreeUtils2
-          F←##.FilesAndDirs
+        ∇ Report;fn1;fn2;rf;rep;thisContainer;i;thisObj;body;thisFile;_;buf;title1;title2;A;F;parms;exe;name
+        ⍝ Produces a report regarding the differnces
+          A←##.##.APLTreeUtils2
+          F←##.##.FilesAndDirs
           fn1←F.GetTempFilename''
           fn2←F.GetTempFilename''
           rep←FF.f.tc.sf2.list.ReportInfo
@@ -673,9 +675,9 @@
                   :EndSelect
                   body←(⊂(10⍴'*'),' ',thisObj),body
                   :Trap 11
-                      (⊂body)##.FilesAndDirs.NPUT thisFile 2
+                      (⊂body)F.NPUT thisFile 2
                   :Else
-                      (⊂'Could not write ',thisObj)##.FilesAndDirs.NPUT thisFile 2
+                      (⊂'Could not write ',thisObj)F.NPUT thisFile 2
                   :EndTrap
               :EndFor
           :EndFor
@@ -684,14 +686,24 @@
           :If 0<'1'+.=rep[;1]
               buf←⊂(10⍴'*'),' Found only in ',title1
               buf,←'#.'∘,¨('1'=rep[;1])⌿rep[;2]
-              (⊂buf)##.FilesAndDirs.NPUT fn1 2
+              (⊂buf)F.NPUT fn1 2
           :EndIf
           :If 0<'2'+.=rep[;1]
               buf←⊂(10⍴'*'),' Found only in ',title2
               buf,←'#.'∘,¨('2'=rep[;1])⌿rep[;2]
-              (⊂buf)##.FilesAndDirs.NPUT fn2 2
+              (⊂buf)F.NPUT fn2 2
           :EndIf
-          ##.RunCompareIt fn1 fn2 1 1 title1 title2
+          :If 9=⎕SE.⎕NC'CompareFiles'
+              (exe name)←⎕SE.CompareFiles.EstablishCompareEXE''
+          :AndIf 3=⎕NC'⎕se.CompareFiles.ComparisonTools.CreateParmsFor',name
+              parms←⍎'⎕se.CompareFiles.ComparisonTools.CreateParmsFor',name
+              parms.(file1 file2)←fn1 fn2
+              parms.(caption1 caption2)←title1 title2
+              parms.use←exe
+              ⎕SE.CompareFiles.Compare parms
+          :Else
+              ⎕←fn1 fn2
+          :EndIf
         ∇
 
         ∇ Compare(row ref readOnly);parms;name1;name2;id;rc
@@ -947,7 +959,7 @@
           caption←∆Caption,' ',(⍕versioNo),': ',(⍕ref1),' [1] :: ',(⍕ref2),' [2]'
           colTitles←'ID' '?' 'Name' 'Path' 'Type 1' 'Type 2' 'Author 1' 'Author 2'
          
-          'FF.aplFnt'⎕WC'Font' 'APL385 Unicode'
+          'FF.aplFnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
           parms←⊂'Form'
           parms,←⊂'Coord' 'Pixel'
           parms,←⊂'Posn'(65 35)
@@ -1517,7 +1529,7 @@
           id←{0<⎕NC ⍵:⍎⍵ ⋄ ''}'id'
           journal←refToDiff.GetRemark id
           'ff'⎕WC'Form'(∆Caption,': Journal')('Coord' 'Prop')
-          'ff.fnt'⎕WC'Font' 'APL385 Unicode'
+          'ff.fnt'⎕WC'Font' 'APL385 Unicode' ('Size' 20)
           ff.FontObj←ff.fnt
 ⍝          ff.IconObj←AppIcon
           _←⊂'ListView'
@@ -1597,10 +1609,10 @@
       title1←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no1;]
       body2←4⊃no2⊃versions
       title2←{'Version ',(⍕1⊃⍵),' from ',(2⊃⍵),' ',(3⊃⍵),' by ',4⊃⍵}meta[no2;]
-      filename1←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-      (⊂body1)##.FilesAndDirs.NPUT filename1 1
-      filename2←##.FilesAndDirs.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
-      (⊂body)##.FilesAndDirs.NPUT filename2 1
+      filename1←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+      (⊂body1)F.NPUT filename1 1
+      filename2←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'
+      (⊂body)F.NPUT filename2 1
       RunCompareIt filename1 filename2 1 title1 title2
     ∇
 

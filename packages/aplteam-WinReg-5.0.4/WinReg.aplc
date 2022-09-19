@@ -22,19 +22,25 @@
 ⍝ * REG_MULTI_SZ (Vectors of strings)
 ⍝ * REG_BINARY (Binary data)
 ⍝ * REG_DWORD (32-bit signed integer)\\
-⍝ Author: Kai Jaeger ⋄ APL Team Ltd ⋄ http://aplteam.com\\
+⍝ Author: Kai Jaeger
 ⍝ Homepage: <https://github.com/aplteam/WinReg>
 
     ⎕ML←1 ⋄ ⎕IO←1
 
     ∇ R←Version
       :Access Public Shared
-      R←'WinReg' '5.0.2+18' '2021-03-02'
+      R←'WinReg' '5.0.4+22' '2021-08-05'
     ∇
 
     ∇ History
       :Access Public Shared
-      ⍝ * 5.0.2
+      ⍝ * 5.0.4 ⋄ 2022-08-05
+      ⍝   * Bug fix in `GetValue`
+      ⍝ * 5.0.3 ⋄ 2022-08-04
+      ⍝   * "Author" information updated
+      ⍝   * New "Make"
+      ⍝   * Packages udated
+      ⍝ * 5.0.2 ⋄ 2021-03-02
       ⍝   * Package config corrected
       ⍝ * 5.0.1
       ⍝   * Naming problem fixed caused by move to `APLTreeUtils2`
@@ -226,7 +232,7 @@
       :Case REG_DWORD
           '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx* U <0T I >I4 >I4 =I4'
       :Case REG_QWORD
-          '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx* U <0T I >I8 >I8 =I8'
+          '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx* U <0T I >U4 >I8 =U4'
       :CaseList REG_SZ,REG_EXPAND_SZ,REG_MULTI_SZ
           '∆RegQueryValueEx'⎕NA'I ADVAPI32.dll.C32|RegQueryValueEx* U <0T I =I >T[] =I4'
       :Else
@@ -994,6 +1000,8 @@
           r←ExpandEnv(¯1+length÷2)↑data
       :Case REG_MULTI_SZ
           r←Partition(¯1+length÷2)↑data
+      :Else
+          ('Data type is not supported: ',⍕type)⎕SIGNAL 11
       :EndSelect
     ∇
 
