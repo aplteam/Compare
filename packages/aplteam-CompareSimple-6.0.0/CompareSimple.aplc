@@ -22,7 +22,7 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'CompareSimple' '6.0.0-rc-2+34' '2022-09-16'
+      r←'CompareSimple' '6.0.0+35' '2022-09-19'
     ∇
 
     ∇ History
