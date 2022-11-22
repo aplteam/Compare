@@ -39,11 +39,13 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '6.0.1+24' '2022-11-21'
+      r←'Compare' '6.0.2+24' '2022-11-22'
     ∇
 
     ∇ History
       :Access Public Shared
+      ⍝ * 6.0.2
+      ⍝   * "Find" dialog box improved
       ⍝ * 6.0.1
       ⍝   * Wrong package dependency was published with 6.0.0 due to a bug in Tatin
       ⍝ * 6.0.0
@@ -69,7 +71,7 @@
       r←'{7B647151-E9A3-B54C-BAF7-7311E69DC8CC}'
     ∇
 
-    ∇ {r}←{flags}Merge y;report;rubbishObjects1;rubbishObjects2;readOnly;refsAreRubbish;rubbishReport1;rubbishReport2;obj;rubbishReport;ref1;ref2;dropFromRubbish;reftoGui
+    ∇ {r}←{flags}Merge y;report;rubbishObjects1;rubbishObjects2;readOnly;refsAreRubbish;rubbishReport1;rubbishReport2;obj;rubbishReport;ref1;ref2;dropFromRubbish;reftoGui;ignoreTatin
       :Access Public Shared
     ⍝ Useful to compare namespaces with each other.
     ⍝
@@ -96,20 +98,20 @@
       flags←{0<⎕NC ⍵:⍎⍵ ⋄ 0 1}'flags'
       (readOnly refsAreRubbish)←2↑flags,(⍴,flags)↓0 1
       readOnly←{(1=⍴,⍵):2⍴⍵ ⋄ (2=⍴⍵):⍵ ⋄ 'Invalid: "readOnly'⎕SIGNAL 11}readOnly
-      'Check left argument'⎕SIGNAL 6/⍨~(⍴,y)∊2 3
-      (ref1 ref2 dropFromRubbish)←3↑y,(⍴,y)↓⍬ ⍬ 0
+      'Check right argument'⎕SIGNAL 6/⍨~(⍴,y)∊2 3 4
+      (ref1 ref2 dropFromRubbish ignoreTatin)←4↑y,(⍴,y)↓⍬ ⍬ 0 0
       'Invalid: "refsAreRubbish'⎕SIGNAL 11/⍨{∧/(,¨⍵)≢¨,¨1 0}refsAreRubbish
       'Invalid left argument: must be one of ¯1, ¯2, 0, 1'⎕SIGNAL 11/⍨∨/~readOnly∊¯1 0 1 ¯2
       'ref1 is not pointing to a namespace'⎕SIGNAL 11/⍨~{0::0 ⋄ 'Namespace'≡⍵.⎕WG'Type'}ref1
       'ref2 is not pointing to a namespace'⎕SIGNAL 11/⍨~{0::0 ⋄ 'Namespace'≡⍵.⎕WG'Type'}ref2
       (ref1 ref2).⎕DF ⎕NULL
-      (ref1 ref2)←{(0∊⍴⍵):⍵ ⋄ ⍎⍕⍵}¨ref1 ref2
+      (ref1 ref2)←{(0=≢⍵):⍵ ⋄ ⍎⍕⍵}¨ref1 ref2
       'ref1 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref1
       'ref2 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref2
       report←rubbishReport1←rubbishReport2←rubbishObjects1←rubbishObjects2←⍬
-      ns_ ref1 ref2 refsAreRubbish
+      ns_ ref1 ref2 refsAreRubbish ignoreTatin
       rubbishReport←PolishRubbishReport ref1 ref2 rubbishReport1 rubbishReport2 refsAreRubbish dropFromRubbish
-      :If 0∊⍴report←⊃report
+      :If 0=≢report←⊃report
           r←''rubbishReport
       :Else
           obj←⎕NEW CompareData(ref1 ref2 report)
@@ -135,7 +137,7 @@
 
     ∇ r←FormatTS ts
       r←{
-          0∊⍴⍵:''
+          0=≢⍵:''
           0=+/⍵:''
           ,'ZI4,<->,ZI2,<->,ZI2,< >,ZI2,<:>,ZI2,<:>,ZI2'⎕FMT,[0.5]6↑,⍵
       }ts
@@ -206,7 +208,7 @@
       {}⎕DQ'ms'
     ∇
 
-    ∇ {recursionFlag}ns_(ref1 ref2 refsAreRubbish);list1;list2
+    ∇ {recursionFlag}ns_(ref1 ref2 refsAreRubbish ignoreTatin);list1;list2
     ⍝ Doing the hard work of the comparison of namespaces:
     ⍝ 1. compare fns
     ⍝ 2. compare opr
@@ -219,8 +221,13 @@
     ⍝⍎(∨/'Server_Code'⍷⍕ref1)/'.'
       recursionFlag←{(0<⎕NC ⍵):⍎⍵ ⋄ 0}'recursionFlag'
       (list1 list2)←{0::'' ⋄ ' '~¨⍨↓⍵.⎕NL 3 4 9.1 9.4 9.5}¨ref1 ref2
+      :If ignoreTatin
+          list1~←⊂'_tatin'
+          list2~←⊂'_tatin'
+      :EndIf
       :If '['∊(⍕ref1),⍕ref2
-          ⎕←'Cannot not compare ',(⍕ref1),'/',(⍕ref2) ⋄ :Return
+          ⎕←'Cannot not compare ',(⍕ref1),'/',(⍕ref2)
+          :Return
       :EndIf
       list1←(ref1 __Get list1)/list1
       list2←(ref2 __Get list2)/list2
@@ -231,31 +238,33 @@
           (rubbishReport1 rubbishObjects1)←ReportRubbishIn ref1 rubbishReport1 rubbishObjects1 recursionFlag refsAreRubbish
           (rubbishReport2 rubbishObjects2)←ReportRubbishIn ref2 rubbishReport2 rubbishObjects2 recursionFlag refsAreRubbish
       :EndIf
-      (list1 list2)←{(0∊⍴⍵):'' ⋄ List ⍵}¨ref1 ref2
-      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 1)
+      (list1 list2)←{(0=≢⍵):'' ⋄ List ⍵}¨ref1 ref2
+      :If ignoreTatin
+          (list1 list2)←{'_tatin'≢{⌽⍵↑⍨¯1+⍵⍳'.'}⌽⍕⍵}¨¨list1 list2
+      :EndIf
+      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 1 ignoreTatin)
           (rubbishReport1 rubbishObjects1)←ReportRubbishIn ref1 rubbishReport1 rubbishObjects1 1 refsAreRubbish
       :EndIf
-      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref2 ref1 list2 list1 2)
+      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref2 ref1 list2 list1 2 ignoreTatin)
           (rubbishReport2 rubbishObjects2)←ReportRubbishIn ref2 rubbishReport2 rubbishObjects2 1 refsAreRubbish
       :EndIf
       ScanOrdinaryNamespacesInBothRefs ref1 ref2
     ∇
 
-    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind);list;this
+    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind ignoreTatin);list;this
     ⍝ Loop over all ordinary (non-scripted) namespaces that exist in `ref1` only
       r←1
-⍝      :If ~0∊↑∘⍴¨,¨list1 list2
-      :If ~0∊⍴list1
-          :If 0∊⍴list2
+      :If 0≠≢list1
+          :If 0=≢list2
               list←list1
           :Else
               list←(~((1+⍴⍕ref1)↓¨⍕¨list1)∊((1+⍴⍕ref2)↓¨⍕¨list2))/list1
           :EndIf
-      :AndIf ~0∊⍴list
-      :AndIf ~0∊⍴list←{(0=↑∘⍴∘Display.GetBody¨⍕¨⍵)/⍵}list
+      :AndIf 0≠≢list
+      :AndIf 0≠≢list←{(0=↑∘⍴∘Display.GetBody¨⍕¨⍵)/⍵}list
           :For this :In list
               r←0
-              1 ns_(ind⊃(this ⍬)(⍬ this)),refsAreRubbish
+              1 ns_(ind⊃(this ⍬)(⍬ this)),refsAreRubbish ignoreTatin
           :EndFor
       :EndIf
     ∇
@@ -280,7 +289,7 @@
       :EndIf
     ∇
 
-      __Get←{0∊⍴⍵:0
+      __Get←{0=≢⍵:0
           0<↑∘⍴¨Display.GetBody¨⍺∘{(⍕⍺),'.',⍵}¨⍵
       }
 
@@ -326,14 +335,14 @@
           lista←((1+⍴⍕ref2)↓¨⍕¨list2){⍺/⍨⍺∊⍵}((1+⍴⍕ref1)↓¨⍕¨list1)
           listb←((1+⍴⍕ref1)↓¨⍕¨list1){⍺/⍨⍺∊⍵}((1+⍴⍕ref2)↓¨⍕¨list2)
           list←lista∩listb
-      :AndIf ~0∊⍴list←lista∩listb
+      :AndIf 0≠≢list←lista∩listb
 ⍝          ⍎(0<+/∊'onBadValue '∘⍷¨⊂,⎕FMT report)/'.'
           :For this :In list
 ⍝         ⍎(∨/'Server_Code'⍷this)/'.'
               :If 9.1=⎕NC⊂(⍕ref2),'.',this
               :AndIf {11 16::1 ⋄ 0⊣⎕SRC ⍵}⍎(⍕ref2),'.',this        ⍝ pass if it is an ordinary namespace
               :AndIf ref1 ref2≢{6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2
-                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),refsAreRubbish
+                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),refsAreRubbish ignoreTatin
               :EndIf
           :EndFor
       :EndIf
@@ -457,7 +466,7 @@
               path←{
                   0=+/l←⊃∘⍴¨⍵:''
                   ⊃⍵/⍨0<l}data_[where;∆path1 ∆path2]
-              r←(⍕¨refToContainer1_ refToContainer2_),¨⊂((~0∊⍴path)/'.'),path,'.',∆name⊃data_[where;]
+              r←(⍕¨refToContainer1_ refToContainer2_),¨⊂((0≠≢path)/'.'),path,'.',∆name⊃data_[where;]
               ⍝ The following gymnastics is needed in order to overcome stupid mistakes like setting
               ⍝ the ⎕DF of a class or a namespace or the like to, say, #.Foo. That won't work here
               ⍝ because we may have copied the objects in question somewhere else, for example into
@@ -486,7 +495,7 @@
           :Access Public
         ⍝ Get all remarks of "id". If "id" is empty, all remarks are returned
           r←journal_
-          :If ~0∊⍴id
+          :If 0≠≢id
               r←(r[;1]∊id)⌿r
           :EndIf
         ∇
@@ -530,7 +539,7 @@
       ∆,←⊂'Size'(⍬(f.Size[2]-5×2))
       ∆,←⊂'Attach'('Top' 'Left' 'Top' 'Right')
       :If ⍬≡lastItemWas
-          :If 0∊⍴preSelect
+          :If 0=≢preSelect
               ∆,←⊂'Selitems'((-1⊃⍴data)↑1)
           :Else
               bool←(⍴data)⍴0
@@ -544,7 +553,7 @@
       'f.ok'⎕WC'Button' 'OK'((f.Size[1]-55),5)(⍬ 80)('Default' 1)('Event' 'Select' 1)('Attach'(4⍴'Bottom' 'Left'))
       'f.cancel'⎕WC'Button' 'Cancel'(f.Size-55 85)(⍬ 80)('Cancel' 1)('Event' 'Select' 1)('Attach'(4⍴'Bottom' 'Right'))
       ⎕NQ'f.c' 'GotFocus' ⋄ res←⎕DQ'f'
-      :If ~0∊⍴res
+      :If 0≠≢res
       :AndIf 'f.ok'≡1⊃res
           r←(f.c.SelItems⍳1)⊃{2=⍴⍴⍵:⍵[;1] ⋄ ⍵}data
       :EndIf
@@ -661,7 +670,7 @@
           fn2←F.GetTempFilename''
           rep←FF.f.tc.sf2.list.ReportInfo
           rep←rep[⍋'≠12'⍳rep[;1];]                                  ⍝ Change sort sequence to make it more convinient
-          rep←↑{(⍵[1])((3⊃⍵),((~0∊⍴3⊃⍵)/'.'),2⊃⍵)}¨↓rep[;1 2 3]     ⍝ We nedd just type and full path
+          rep←↑{(⍵[1])((3⊃⍵),((0≠≢3⊃⍵)/'.'),2⊃⍵)}¨↓rep[;1 2 3]     ⍝ We nedd just type and full path
           :For thisFile thisContainer :InEach (fn1 fn2)(ref1 ref2)
               :For i :In ⍳rep[;1]+.='≠'
                   thisObj←2⊃rep[i;]
@@ -831,7 +840,7 @@
          
           ref←⍎objName  ⍝ Ref to the ListView
           :If 1=+/ref.SelItems
-              caption←'Delete ',({0∊⍴1⊃⍵~' ':2⊃⍵ ⋄ (1⊃⍵),'.',2⊃⍵}ref.ReportInfo[↑ref.SelItems⍳1;3 2]),' from...'
+              caption←'Delete ',({0=≢1⊃⍵~' ':2⊃⍵ ⋄ (1⊃⍵),'.',2⊃⍵}ref.ReportInfo[↑ref.SelItems⍳1;3 2]),' from...'
           :Else
               caption←'Delete ',(⍕+/ref.SelItems),' items from...'
           :EndIf
@@ -1058,7 +1067,7 @@
         ⍝ If "rubbish" is not empty a warning is shown.
         ⍝ This is about references to unnamed namespaces, instances & attached namespaces.
           r←⍬
-          :If ~0∊⍴rubbish
+          :If 0≠≢rubbish
               n←⎕NS''
               ∆←''
               ∆,←⊂'Caption' 'Rubbish Report'
@@ -1118,7 +1127,7 @@
               ⎕NQ({~(1⍴⍵)∊'#⎕':⍵ ⋄ (1+⍴⍕⎕THIS)↓⍵}objName)'GotFocus'
               newBodies←0 GetBody¨nameList
               :If oldBody1≢1⊃newBodies
-                  :If 0∊⍴oldBody1
+                  :If 0=≢oldBody1
                       refToDiff.AddRemark id'Added to [2]'
                   :Else
                       refToDiff.AddRemark id'Changed in [2]'
@@ -1126,7 +1135,7 @@
               :EndIf
               :If 2=⍴nameList
                   :If oldBody2≢2⊃newBodies
-                      :If 0∊⍴oldBody2
+                      :If 0=≢oldBody2
                           refToDiff.AddRemark id'Added to [2]'
                       :Else
                           refToDiff.AddRemark id'Changed in [2]'
@@ -1153,7 +1162,7 @@
         ∇ ref←GetCurrentTab postfix;name
         ⍝ Returns a reference to the currently selected tab
           name←'FF.f.tc.sf',¯1↑⍕FF.f.tc.TabObj
-          :If ~0∊⍴postfix
+          :If 0≠≢postfix
               name,←'.',postfix
           :EndIf
           ref←⍎name
@@ -1167,7 +1176,7 @@
 
         ∇ r←GetId objRef
         ⍝ Return id(s) of currently selected line(s) or 0
-          :If 0∊⍴r←objRef.(SelItems/Items)
+          :If 0=≢r←objRef.(SelItems/Items)
               r←0
           :Else
               r←⍎¨r,¨⊂' +0'
@@ -1254,8 +1263,6 @@
               row←refToDiff.GetRowById id
               (objName1 objName2)←refToDiff.GetObjNames id
               'mm'⎕WC'Menu'
-              'mm.cancel'⎕WC'MenuItem' 'Cancel'
-              'mm.sep1'⎕WC'Separator'
               :If ~∨/readOnly∊1 ¯1 ¯2
                   'mm.edit'⎕WC'MenuItem'('Edit',tab,'Ctrl+Enter')('Active'((1=⍴,objName1)∧0∨.<⊃¨⎕NC¨objName1 objName2))
               :EndIf
@@ -1270,7 +1277,7 @@
               :EndIf
               {⍵ ⎕WS'Event' 'Select' 1}¨'mm.'∘,¨mm.⎕WN''
               res←⎕DQ'mm'
-              :If ~0∊⍴res
+              :If 0≠≢res
                   :Select {⍵↓⍨⍵⍳'.'}1⊃res
                   :Case 'edit'
                       Edit row objName
@@ -1352,7 +1359,7 @@
           :If 1=1⊃⍴row←refToDiff.GetRowById id
               dates←FormatTS¨{0::⍬ ⋄ 2 ⎕AT ⍵}¨refToDiff.GetObjNames id
               FF.f.sb.(ts1 ts2).Text←dates
-              dates←{{0∊⍴⍵:⍬ ⋄ ⍎⍵}⍵~'- :'}¨dates
+              dates←{{0=≢⍵:⍬ ⋄ ⍎⍵}⍵~'- :'}¨dates
               :If 0∊⊃∘⍴¨,¨dates
               :OrIf {⎕CT←1E¯17 ⋄ =/⍵}dates
                   FF.f.sb.(ts1 ts2).BCol←0
@@ -1412,7 +1419,7 @@
 
         ∇ r←FormatTS ts
           r←{
-              0∊⍴⍵:''
+              0=≢⍵:''
               0=+/⍵:''
               ,'ZI4,<->,ZI2,<->,ZI2,< >,ZI2,<:>,ZI2,<:>,ZI2'⎕FMT,[0.5]6↑,⍵
           }ts
@@ -1422,7 +1429,7 @@
           ∆←⊂'Form'
           ∆,←⊂'Coord' 'Pixel'
           ∆,←⊂'Caption'(∆Caption,': Search')
-          ∆,←⊂'Size'(260 300)
+          ∆,←⊂'Size'(280 320)
           ∆,←⊂'Sizeable' 0
           ∆,←⊂'MinButton' 0
           ∆,←⊂'MaxButton' 0
@@ -1433,44 +1440,44 @@
           ff.FontObj←DefaultFnt
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(5 5)
+          ∆,←⊂'Posn'(10 10)
           ∆,←⊂'Caption' 'String to be searched (case is ignored):'
           'ff.l'⎕WC ∆
          
           ∆←⊂'Edit'
-          ∆,←⊂'Posn'(35 5)
-          ∆,←⊂'Size'(⍬(ff.Size[2]-10))
+          ∆,←⊂'Posn'(40 10)
+          ∆,←⊂'Size'(⍬(ff.Size[2]-20))
           ∆,←⊂'Text'∆SearchFor
           ∆,←⊂'SelText'(1,1+⍴,∆SearchFor)
           'ff.e'⎕WC ∆
           ff.e.Size[1]-←4
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(70 5)
+          ∆,←⊂'Posn'(80 10)
           ∆,←⊂'Caption' 'The search will be performed on these columns:'
           'ff.info1'⎕WC ∆
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(90 5)
+          ∆,←⊂'Posn'(100 10)
           ∆,←⊂'Caption' '"Name", "Path" and maybe "author names"'
           'ff.info2'⎕WC ∆
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(115 5)
+          ∆,←⊂'Posn'(125 10)
           ∆,←⊂'Caption' 'Result (IDs) is displayed in the status bar.'
           'ff.info3'⎕WC ∆
          
           ∆←⊂'Button'
           ∆,←⊂'Style' 'Check'
-          ∆,←⊂'Caption' 'Not in "Author" names'
+          ∆,←⊂'Caption' 'Ignore column "Author" names'
           ∆,←⊂'State' 1
-          ∆,←⊂'Posn'((ff.Size[1]-60),7)
+          ∆,←⊂'Posn'((ff.Size[1]-75),12)
           'ff.names'⎕WC ∆
          
           ∆←⊂'Button'
           ∆,←⊂'Caption' 'OK'
           ∆,←⊂'Default' 1
-          ∆,←⊂'Posn'((ff.Size[1]-30),5)
+          ∆,←⊂'Posn'((ff.Size[1]-35),10)
           ∆,←⊂'Size'(⍬ 120)
           ∆,←⊂'Event' 'Select' 1
           'ff.ok'⎕WC ∆
@@ -1478,25 +1485,25 @@
           ∆←⊂'Button'
           ∆,←⊂'Caption' 'Cancel'
           ∆,←⊂'Cancel' 1
-          ∆,←⊂'Posn'(ff.Size-30 125)
+          ∆,←⊂'Posn'(ff.Size-35 130)
           ∆,←⊂'Size'(⍬ 120)
           ∆,←⊂'Event' 'Select' 1
           'ff.cancel'⎕WC ∆
          
           ⎕NQ'ff.e' 'GotFocus' ⋄ res←⎕DQ'ff'
-          :If ~0∊⍴res
+          :If 0≠≢res
           :AndIf 'ff.ok'≡1⊃res
-              ∆SearchFor←ff.e.Text
+          :AndIf 0<≢∆SearchFor←ff.e.Text
               listObj←{⍵.list}⍎{'FF.f.tc.sf',⍕⍵}⍎¯1↑⍕FF.f.tc.TabObj
               searchIn←{⍵.ReportInfo[;2 3 6 7]}listObj
               searchIn←(-2×ff.names.State)↓[2]searchIn
               bool←∨/(⎕C ∆SearchFor)⍷⎕FMT ⎕C searchIn
-              :If 0∊⍴∆Hits←bool/listObj.Items
+              :If 0=≢∆Hits←bool/listObj.Items
                   ⎕EX'ff'
                   'ms'⎕WC'MsgBox' 'Compare: not hits'('Search string "',∆SearchFor,'" not found')
                   ⎕DQ'ms'
               :Else
-                  FF.f.sb.Info.Text←'Hits in:',⍕∆Hits
+                  FF.f.sb.Info.Text←'Hits in: ',⊃{⍺,',',⍵}/∆Hits
               :EndIf
           :EndIf
         ∇
@@ -1531,7 +1538,7 @@
           id←{0<⎕NC ⍵:⍎⍵ ⋄ ''}'id'
           journal←refToDiff.GetRemark id
           'ff'⎕WC'Form'(∆Caption,': Journal')('Coord' 'Prop')
-          'ff.fnt'⎕WC'Font' 'APL385 Unicode' ('Size' 20)
+          'ff.fnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
           ff.FontObj←ff.fnt
 ⍝          ff.IconObj←AppIcon
           _←⊂'ListView'
@@ -1639,13 +1646,13 @@
       List←{
           ⍝r←⍵{ ⊃∇/⍺.(⍺{(0,⍵)/⍨0,(⍺≠⍵)∧⍺=⍵.##}⍎⍕'⍺',⌽⎕NL-9.1),⊂⍵,⍺}⍬
           r←⍵{⍺.(⍺{(0,⍵)/⍨0,(⍺≠⍵)∧⍺=⍵.##}⍎⍕'⍺',⌽⎕NL-9.1),⊂⍵,⍺}⍬
-          (0∊⍴r←(⍬∘≡¨⍴¨r)/r):⍬
+          (0=≢r←(⍬∘≡¨⍴¨r)/r):⍬
           _←{⍵.⎕DF ⎕NULL}¨r
           ⍵~⍨∪r/⍨~'['∊¨⍕¨r
       }
 
       GetNameClass←{
-          (0∊⍴1⊃⍵):0
+          (0=≢1⊃⍵):0
           ⎕NC{⍺,'.',⍵}/⍵
       }
 
@@ -1654,7 +1661,7 @@
     ⍝ * Refs pointing to namespaces
     ⍝ * Empty ordinary namespaces
     ⍝ * Instances
-      :If ~0∊⍴ref
+      :If 0≠≢ref
           (buf rubbishObjects)←InvestigateNamespaces(ref rubbishObjects''refsAreRubbish)
           (buf rubbishObjects)←InvestigateInstances(ref rubbishObjects buf)
           (buf rubbishObjects)←InvestigateClasses(ref rubbishObjects buf)
@@ -1668,22 +1675,22 @@
 
     ∇ (report rubbishObjects)←InvestigateInstances(ref rubbishObjects report);list;fn;msg;types;bool
     ⍝ Finally we deal with instances of all sorts.
-      :If ~0∊⍴list←ref.⎕NL-9.2                  ⍝ Any instances at all?
+      :If 0≠≢list←ref.⎕NL-9.2                  ⍝ Any instances at all?
           fn←(⊂(⍕ref),'.'),¨list                ⍝ Fully qualified names
           bool←{0::0 ⋄ ⍵ ⎕WG'KeepOnClose'}¨fn
           :If 1∊bool
               report,←⊂'GUI Instances with KeepOnClose=1:'(bool/fn)
               rubbishObjects,←bool/fn
-              :If 0∊⍴fn←(~bool)/fn
+              :If 0=≢fn←(~bool)/fn
                   :Return
               :EndIf
           :EndIf
       ⍝ Instances may have code in their attached namespaces:
-          :If 1∊bool←{~0∊⍴⍵.⎕NL⍳16}¨⍎¨fn
+          :If 1∊bool←{0≠≢⍵.⎕NL⍳16}¨⍎¨fn
               msg←'Instances with code in attached namespace:'
               report,←⊂(msg)(bool/fn) ⍝ Indeed!
               rubbishObjects,←bool/fn
-              :If 0∊⍴fn←(~bool)/fn
+              :If 0=≢fn←(~bool)/fn
                   :Return
               :EndIf
           :EndIf
@@ -1704,18 +1711,18 @@
 
     ∇ (report rubbishObjects)←InvestigateNamespaces(ref rubbishObjects report refsAreRubbish);list;fn;refs;bool;nn;bool2
     ⍝ First we deal with references pointing to namespaces, unnamed or otherwise
-      :If ~0∊⍴list←ref.⎕NL-9.1                  ⍝ All namespaces
+      :If 0≠≢list←ref.⎕NL-9.1                  ⍝ All namespaces
           fn←(⊂(⍕ref),'.'),¨list                ⍝ Same but full name
           bool←fn≢¨⍕¨GetDisplayFormat¨⍎¨fn      ⍝ 1=refs, 0=named namespaces
-          :If ~0∊⍴refs←bool/fn                  ⍝ Are there any pure refrences?
+          :If 0≠≢refs←bool/fn                  ⍝ Are there any pure refrences?
               :If refsAreRubbish
                   report,←⊂'Namespace references:'refs
                   rubbishObjects,←refs
               :EndIf
           :EndIf
           nn←(~bool)/fn                         ⍝ Named namespaces
-          :If ~0∊⍴nn                            ⍝ Any?
-          :AndIf 1∊bool2←{0∊⍴⍵.⎕NL⍳16}¨⍎¨nn     ⍝ Are they empty?
+          :If 0≠≢nn                            ⍝ Any?
+          :AndIf 1∊bool2←{0=≢⍵.⎕NL⍳16}¨⍎¨nn     ⍝ Are they empty?
               report,←⊂('Empty Namespaces:')(bool2/nn)
               rubbishObjects,←bool2/nn
           :EndIf
@@ -1725,9 +1732,9 @@
     ∇ (report rubbishObjects)←InvestigateClassesAndInterfaces(ref rubbishObjects report nc);list;fn;bool;msg
     ⍝ Now we deal with classes or interfaces: they may have code in their attached namespace
     ⍝ "nc" is either 9.4 (classes) or 9.5 (interfaces)
-      :If ~0∊⍴list←ref.⎕NL-nc                   ⍝ Any at all?
+      :If 0≠≢list←ref.⎕NL-nc                   ⍝ Any at all?
           fn←(⊂(⍕ref),'.'),¨list                ⍝ Full names
-      :AndIf 1∊bool←{~0∊⍴⍵.⎕NL⍳16}¨⍎¨fn         ⍝ Is the attached namespace not empty?!
+      :AndIf 1∊bool←{0≠≢⍵.⎕NL⍳16}¨⍎¨fn         ⍝ Is the attached namespace not empty?!
           msg←(9.4 9.5⍳nc)⊃'Classes' 'Interfaces'
           msg,←' with code in attached namespace:'
           report,←⊂(msg)(bool/fn)               ⍝ Indeed!
@@ -1744,7 +1751,7 @@
       ⍝ that they occure either zero or exactly one time
       r←''
       :For thisReport thisTitle :InEach (report1 report2)(⍕¨ref1 ref2)
-          :If ~0∊⍴thisReport
+          :If 0≠≢thisReport
               r,←⊂dropFromRubbish↓thisTitle
               buffer←0 2⍴''
               :For type data :In thisReport
@@ -1755,7 +1762,7 @@
                       buffer⍪←type(dropFromRubbish↓¨data)
                   :EndIf
               :EndFor
-              :If ~0∊⍴buffer
+              :If 0≠≢buffer
                   r,←↑,/{(⊂'  ',1⊃⍵),'     '∘,¨2⊃⍵}¨↓buffer
               :EndIf
           :EndIf
@@ -1766,10 +1773,10 @@
 
       ListOrdinaryNamespaces←{
       ⍝ Corrects any ⎕DF related issues
-          (0∊⍴⍵):''
-          (0∊⍴l←' '~¨⍨↓⍵.⎕NL 9.1):''
+          (0=≢⍵):''
+          (0=≢l←' '~¨⍨↓⍵.⎕NL 9.1):''
           _←⍵{0::⍬ ⋄ ⍺.⍎⍵,'.⎕DF ⎕NULL'}¨l
-          (0∊⍴l←(⍬∘≢¨⍵{0::⍬ ⋄ ⍺.⍎⍵}¨l)/l):''
+          (0=≢l←(⍬∘≢¨⍵{0::⍬ ⋄ ⍺.⍎⍵}¨l)/l):''
           ⍵.⍎¨l
       }
 
