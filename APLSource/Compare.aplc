@@ -30,8 +30,8 @@
 ⍝ If you are looking for a simple comparison tool then check CompareSimple
 ⍝ first. `Compare` inherits `CompareSimple`.
 ⍝ ## Comparison
-⍝ The actual comparison is left to the user command ]CompeFiles if available.
-⍝ If not the filenames are printed to the session.
+⍝ The actual comparison is left to the user command ]CompareFiles if available.
+⍝ If that is not available then the filenames are printed to the session.
 ⍝ Author: Kai Jaeger
 ⍝ Homepage: <https://github.com/aplteam/Compare>
 
@@ -39,14 +39,15 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '6.0.2+25' '2022-11-22'
+      r←'Compare' '6.1.0-beta-2+24' '2023-02-28'
     ∇
 
     ∇ History
       :Access Public Shared
-      ⍝ * 6.0.2
-      ⍝   * "Find" dialog box improved
-      ⍝   * `ignoreTatin` introduced
+      ⍝ * 6.1.0
+      ⍝   * Can now ignore #._tatin / ⎕SE._tatin
+      ⍝   * Bug fixes
+      ⍝     `Merge` had a problem
       ⍝ * 6.0.1
       ⍝   * Wrong package dependency was published with 6.0.0 due to a bug in Tatin
       ⍝ * 6.0.0
@@ -72,59 +73,67 @@
       r←'{7B647151-E9A3-B54C-BAF7-7311E69DC8CC}'
     ∇
 
-    ∇ {r}←{flags}Merge y;report;rubbishObjects1;rubbishObjects2;readOnly;refsAreRubbish;rubbishReport1;rubbishReport2;obj;rubbishReport;ref1;ref2;dropFromRubbish;reftoGui;ignoreTatin
+    ∇ {r}←{parms}Merge(ref1 ref2);obj;rubbishReport;reftoGui;rubbish
       :Access Public Shared
-    ⍝ Useful to compare namespaces with each other.
-    ⍝
-    ⍝ `flags` is optional and may carry one or two Booleans:
-    ⍝ * `readOnly` flag: controls the user's ability to change what's displayed.
-    ⍝   Might be a scalar or a vector of length two, one Boolean for each side.
-    ⍝   Defaults to 0, meaning the user can change everything
-    ⍝ * `refsAreRubbish` flag: 1 means that refs are considered to be temporary
+    ⍝ Useful to compare namespaces with each other.\\
+    ⍝ The right argument must be references to the namespaces to be compared.\\
+    ⍝ `parms` is optional and defaults to what is returned by `CreateMegreParms:
+    ⍝ * `readOnly` controls the user's ability to change the code.
+    ⍝   Might be a scalar or a vector of length two, one Boolean for each pane.
+    ⍝   Defaults to 0, meaning the user can change everything.
+    ⍝ * `refsAreRubbish`: 1 means that refs are considered to be temporary
     ⍝   and therefore they need to be reported as "rubbish". This is a highly
     ⍝   philosphical thing to decide, so we leave this to the user. Default is 1.
-    ⍝
+    ⍝ * `ignoreTatin`: Tatin packages are loaded into #._tatin or ⎕SE._tatin.
+    ⍝   If this is 1 (the default) then these two namespace are ignored,
+    ⍝   Note however, that refs pointing into those two namespaces would still
+    ⍝   show unless `refsAreRubbish` is 1.\\
     ⍝ The `readOnly` can be:
     ⍝ |`0`  | Allow user changes
     ⍝ |`1`  | Don't allow changes
     ⍝ |`¯1` | Don't show anything, just return data structures
     ⍝ |`¯2` | Show the GUI but don't execute ⎕DQ
-    ⍝
-    ⍝ Result:
-    ⍝
+    ⍝ Result:\\
     ⍝ Always a two-item vector with the differences reported in [1] and the rubbish
     ⍝ reported in [2].
-     
       (⎕ML ⎕IO)←3 1
-      flags←{0<⎕NC ⍵:⍎⍵ ⋄ 0 1}'flags'
-      (readOnly refsAreRubbish)←2↑flags,(⍴,flags)↓0 1
-      readOnly←{(1=⍴,⍵):2⍴⍵ ⋄ (2=⍴⍵):⍵ ⋄ 'Invalid: "readOnly'⎕SIGNAL 11}readOnly
-      'Check right argument'⎕SIGNAL 6/⍨~(⍴,y)∊2 3 4
-      (ref1 ref2 dropFromRubbish ignoreTatin)←4↑y,(⍴,y)↓⍬ ⍬ 0 0
-      'Invalid: "refsAreRubbish'⎕SIGNAL 11/⍨{∧/(,¨⍵)≢¨,¨1 0}refsAreRubbish
-      'Invalid left argument: must be one of ¯1, ¯2, 0, 1'⎕SIGNAL 11/⍨∨/~readOnly∊¯1 0 1 ¯2
+      :If 0=⎕NC'parms'
+          parms←CreateMergeParms
+      :EndIf
+      parms.readOnly←{(1=⍴,⍵):2⍴⍵ ⋄ (2=⍴⍵):⍵ ⋄ 'Invalid: "readOnly'⎕SIGNAL 11}parms.readOnly
+      'Invalid: "refsAreRubbish'⎕SIGNAL 11/⍨{∧/(,¨⍵)≢¨,¨1 0}parms.refsAreRubbish
+      'Invalid left argument: must be one of ¯1, ¯2, 0, 1'⎕SIGNAL 11/⍨∨/~parms.readOnly∊¯1 0 1 ¯2
       'ref1 is not pointing to a namespace'⎕SIGNAL 11/⍨~{0::0 ⋄ 'Namespace'≡⍵.⎕WG'Type'}ref1
       'ref2 is not pointing to a namespace'⎕SIGNAL 11/⍨~{0::0 ⋄ 'Namespace'≡⍵.⎕WG'Type'}ref2
       (ref1 ref2).⎕DF ⎕NULL
       (ref1 ref2)←{(0=≢⍵):⍵ ⋄ ⍎⍕⍵}¨ref1 ref2
       'ref1 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref1
       'ref2 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref2
-      report←rubbishReport1←rubbishReport2←rubbishObjects1←rubbishObjects2←⍬
-      ns_ ref1 ref2 refsAreRubbish ignoreTatin
-      rubbishReport←PolishRubbishReport ref1 ref2 rubbishReport1 rubbishReport2 refsAreRubbish dropFromRubbish
-      :If 0=≢report←⊃report
+      rubbish←⎕NS''
+      rubbish.(report←report1←report2←objects1←objects2←⍬)
+      ns_ ref1 ref2 rubbish parms
+      rubbishReport←PolishRubbishReport ref1 ref2 rubbish parms
+      :If 0=≢rubbish.report←⊃rubbish.report
           r←''rubbishReport
       :Else
-          obj←⎕NEW CompareData(ref1 ref2 report)
-          :If ∧/readOnly∊0 1 ¯2
-              reftoGui←DisplayDiff obj readOnly(2⊃Version)rubbishReport
+          obj←⎕NEW CompareData(ref1 ref2 rubbish.report)
+          :If ∧/parms.readOnly∊0 1 ¯2
+              reftoGui←DisplayDiff obj parms.readOnly(2⊃Version)rubbishReport
           :EndIf
-          :If ¯2∊readOnly
-              r←report rubbishReport reftoGui
+          :If ¯2∊parms.readOnly
+              r←rubbish.report rubbishReport reftoGui
           :Else
-              r←report rubbishReport
+              r←rubbish.report rubbishReport
           :EndIf
       :EndIf
+    ∇
+
+    ∇ r←CreateMergeParms
+      :Access Public Shared
+      r←⎕NS''
+      r.readOnly←0 0
+      r.refsAreRubbish←1
+      r.ignoreTatin←1
     ∇
 
     ∇ {reftoGui}←DisplayDiff(diff readOnly versionNo rubbish)
@@ -209,50 +218,57 @@
       {}⎕DQ'ms'
     ∇
 
-    ∇ {recursionFlag}ns_(ref1 ref2 refsAreRubbish ignoreTatin);list1;list2
+    ∇ {r}←{recursionFlag}ns_(ref1 ref2 rubbish parms);list1;list2
     ⍝ Doing the hard work of the comparison of namespaces:
     ⍝ 1. compare fns
     ⍝ 2. compare opr
     ⍝ 3. compare classes and interfaces
     ⍝ 4. compare scripted namespaces
-    ⍝ 5. Call recursively if there are non-scripted sub-namespaces
-    ⍝
+    ⍝ 5. Call recursively if there are non-scripted sub-namespaces\\
     ⍝ Adds rows to semi-global "report" (the "result" of the investigation)
-     
-    ⍝⍎(∨/'Server_Code'⍷⍕ref1)/'.'
+      r←⍬
       recursionFlag←{(0<⎕NC ⍵):⍎⍵ ⋄ 0}'recursionFlag'
       (list1 list2)←{0::'' ⋄ ' '~¨⍨↓⍵.⎕NL 3 4 9.1 9.4 9.5}¨ref1 ref2
-      :If ignoreTatin
-          list1~←⊂'_tatin'
-          list2~←⊂'_tatin'
+      :If parms.ignoreTatin
+          (list1 list2)←{⍵~⊂'_tatin'}¨list1 list2
+          list1←RemoverRefsToTatin ref1 list1
+          list2←RemoverRefsToTatin ref2 list2
       :EndIf
       :If '['∊(⍕ref1),⍕ref2
-          ⎕←'Cannot not compare ',(⍕ref1),'/',(⍕ref2)
-          :Return
+          ⎕←'Cannot not compare ',(⍕ref1),'/',(⍕ref2) ⋄ :Return
       :EndIf
       list1←(ref1 __Get list1)/list1
       list2←(ref2 __Get list2)/list2
-      report,←ProcessCode ref1 list1 list2 1    ⍝ Everything in [1] only
-      report,←ProcessCode ref2 list2 list1 2    ⍝ Everything in [2] only
-      report,←ScanCodeFoundInBothRefs(list1∩list2)ref1 ref2
+      rubbish.report,←ProcessCode ref1 list1 list2 1    ⍝ Everything in [1] only
+      rubbish.report,←ProcessCode ref2 list2 list1 2    ⍝ Everything in [2] only
+      rubbish.report,←ScanCodeFoundInBothRefs(list1∩list2)ref1 ref2
       :If 0=recursionFlag
-          (rubbishReport1 rubbishObjects1)←ReportRubbishIn ref1 rubbishReport1 rubbishObjects1 recursionFlag refsAreRubbish
-          (rubbishReport2 rubbishObjects2)←ReportRubbishIn ref2 rubbishReport2 rubbishObjects2 recursionFlag refsAreRubbish
+          rubbish.(report1 objects1)←ReportRubbishIn ref1 rubbish.report1 rubbish.objects1 recursionFlag parms.refsAreRubbish
+          rubbish.(report2 objects2)←ReportRubbishIn ref2 rubbish.report2 rubbish.objects2 recursionFlag parms.refsAreRubbish
       :EndIf
       (list1 list2)←{(0=≢⍵):'' ⋄ List ⍵}¨ref1 ref2
-      :If ignoreTatin
-          (list1 list2)←{'_tatin'≢{⌽⍵↑⍨¯1+⍵⍳'.'}⌽⍕⍵}¨¨list1 list2
+      :If parms.ignoreTatin
+          (list1 list2)←{⍵~⊂'_tatin'}¨list1 list2
+          list1 list2←ref1 ref2{⍵/⍨((⍕⍺),'._tatin')∘≢¨⍕¨⍵}¨list1 list2
       :EndIf
-      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 1 ignoreTatin)
-          (rubbishReport1 rubbishObjects1)←ReportRubbishIn ref1 rubbishReport1 rubbishObjects1 1 refsAreRubbish
+      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref1 ref2 list1 list2 1 rubbish parms
+          rubbish.(report1 objects1)←ReportRubbishIn ref1 rubbish.report1 rubbish.objects1 1 parms.refsAreRubbish
       :EndIf
-      :If 1∨recursionFlag∧refsAreRubbish ProcessUniqueObjects(ref2 ref1 list2 list1 2 ignoreTatin)
-          (rubbishReport2 rubbishObjects2)←ReportRubbishIn ref2 rubbishReport2 rubbishObjects2 1 refsAreRubbish
+      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref2 ref1 list2 list1 2 rubbish parms
+          rubbish.(report2 objects2)←ReportRubbishIn ref2 rubbish.report2 rubbish.objects2 1 parms.refsAreRubbish
       :EndIf
-      ScanOrdinaryNamespacesInBothRefs ref1 ref2
+      ScanOrdinaryNamespacesInBothRefs ref1 ref2 rubbish parms
     ∇
 
-    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind ignoreTatin);list;this
+    ∇ list←RemoverRefsToTatin(ref list);bool;bool2
+      :If 0<≢list
+      :AndIf ∨/bool←9.1=↑∘ref.⎕NC¨⊂¨list
+      :AndIf ∨/~bool2←~∨/¨((⍕ref),'._tatin.')∘⍷¨⍕¨ref{⍺⍎⍵}¨bool/list
+          list←(bool\bool2)/list
+      :EndIf
+    ∇
+
+    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind rubbish parms);list;this
     ⍝ Loop over all ordinary (non-scripted) namespaces that exist in `ref1` only
       r←1
       :If 0≠≢list1
@@ -265,7 +281,7 @@
       :AndIf 0≠≢list←{(0=↑∘⍴∘Display.GetBody¨⍕¨⍵)/⍵}list
           :For this :In list
               r←0
-              1 ns_(ind⊃(this ⍬)(⍬ this)),refsAreRubbish ignoreTatin
+              1 ns_(ind⊃(this ⍬)(⍬ this)),rubbish parms
           :EndFor
       :EndIf
     ∇
@@ -291,7 +307,7 @@
     ∇
 
       __Get←{0=≢⍵:0
-          0<↑∘⍴¨Display.GetBody¨⍺∘{(⍕⍺),'.',⍵}¨⍵
+          0<≢¨Display.GetBody¨⍺∘{(⍕⍺),'.',⍵}¨⍵
       }
 
       IsNotScript←{
@@ -325,25 +341,35 @@
       :EndFor
     ∇
 
-    ∇ {r}←ScanOrdinaryNamespacesInBothRefs(ref1 ref2);list1;list2;lista;listb;this;list
+    ∇ {r}←ScanOrdinaryNamespacesInBothRefs(ref1 ref2 rubbish parms);list1;list2;lista;listb;this;list
     ⍝ Loop over all ordinary (non-scripted) namespaces that exist in both, [1] and [2]
       r←⍬
       (list1 list2)←ListOrdinaryNamespaces¨ref1 ref2
-      list1~←rubbishObjects1
-      list2~←rubbishObjects2
-      :If ~0∊↑∘⍴¨list1 list2
-      :AndIf 0∧.<↑∘⍴¨⍕¨ref1 ref2 ⍝ both must be alive for that
+      :If parms.ignoreTatin
+          :If 0<≢list1
+          :AndIf 0<ref1.⎕NC'_tatin'
+          :AndIf 0<≢list1←list1~⊂⍎(⍕ref1),'._tatin'
+              list1/⍨←((⍕ref1),'._tatin'){(⍺,'.')∘≢¨'.',⍨¨(≢⍺)↑¨⍕¨⍵}list1
+          :EndIf
+          :If 0<≢list2
+          :AndIf 0<ref2.⎕NC'_tatin'
+          :AndIf 0<≢list2←list2~⊂⍎(⍕ref2),'._tatin'
+              list2/⍨←((⍕ref2),'._tatin'){(⍺,'.')∘≢¨'.',⍨¨(≢⍺)↑¨⍕¨⍵}list2
+          :EndIf
+      :EndIf
+      list1~←rubbish.objects1
+      list2~←rubbish.objects2
+      :If 0≠≢≢¨list1 list2
+      :AndIf 0∧.<≢¨⍕¨ref1 ref2 ⍝ both must be alive for that
           lista←((1+⍴⍕ref2)↓¨⍕¨list2){⍺/⍨⍺∊⍵}((1+⍴⍕ref1)↓¨⍕¨list1)
           listb←((1+⍴⍕ref1)↓¨⍕¨list1){⍺/⍨⍺∊⍵}((1+⍴⍕ref2)↓¨⍕¨list2)
           list←lista∩listb
       :AndIf 0≠≢list←lista∩listb
-⍝          ⍎(0<+/∊'onBadValue '∘⍷¨⊂,⎕FMT report)/'.'
           :For this :In list
-⍝         ⍎(∨/'Server_Code'⍷this)/'.'
               :If 9.1=⎕NC⊂(⍕ref2),'.',this
               :AndIf {11 16::1 ⋄ 0⊣⎕SRC ⍵}⍎(⍕ref2),'.',this        ⍝ pass if it is an ordinary namespace
               :AndIf ref1 ref2≢{6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2
-                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),refsAreRubbish ignoreTatin
+                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),rubbish parms
               :EndIf
           :EndFor
       :EndIf
@@ -960,7 +986,6 @@
           :If ∧/~¯2∊readOnly
               ShowRubbishWarning rubbish FF.f.Posn
           :EndIf
-          {}2 ⎕NQ'FF.f.tc.sf2.list' 'SetItemState' 1 3
           :If ∧/~¯2∊readOnly
               res←'FF.f.tc.sf2.list'DQ'FF.f'
           :EndIf
@@ -1265,6 +1290,8 @@
               row←refToDiff.GetRowById id
               (objName1 objName2)←refToDiff.GetObjNames id
               'mm'⎕WC'Menu'
+              'mm.cancel'⎕WC'MenuItem' 'Cancel'
+              'mm.sep1'⎕WC'Separator'
               :If ~∨/readOnly∊1 ¯1 ¯2
                   'mm.edit'⎕WC'MenuItem'('Edit',tab,'Ctrl+Enter')('Active'((1=⍴,objName1)∧0∨.<⊃¨⎕NC¨objName1 objName2))
               :EndIf
@@ -1431,7 +1458,7 @@
           ∆←⊂'Form'
           ∆,←⊂'Coord' 'Pixel'
           ∆,←⊂'Caption'(∆Caption,': Search')
-          ∆,←⊂'Size'(250 320)
+          ∆,←⊂'Size'(260 300)
           ∆,←⊂'Sizeable' 0
           ∆,←⊂'MinButton' 0
           ∆,←⊂'MaxButton' 0
@@ -1442,44 +1469,44 @@
           ff.FontObj←DefaultFnt
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(10 10)
+          ∆,←⊂'Posn'(5 5)
           ∆,←⊂'Caption' 'String to be searched (case is ignored):'
           'ff.l'⎕WC ∆
          
           ∆←⊂'Edit'
-          ∆,←⊂'Posn'(40 10)
-          ∆,←⊂'Size'(⍬(ff.Size[2]-20))
+          ∆,←⊂'Posn'(35 5)
+          ∆,←⊂'Size'(⍬(ff.Size[2]-10))
           ∆,←⊂'Text'∆SearchFor
           ∆,←⊂'SelText'(1,1+⍴,∆SearchFor)
           'ff.e'⎕WC ∆
           ff.e.Size[1]-←4
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(80 10)
+          ∆,←⊂'Posn'(70 5)
           ∆,←⊂'Caption' 'The search will be performed on these columns:'
           'ff.info1'⎕WC ∆
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(100 10)
+          ∆,←⊂'Posn'(90 5)
           ∆,←⊂'Caption' '"Name", "Path" and maybe "author names"'
           'ff.info2'⎕WC ∆
          
           ∆←⊂'Label'
-          ∆,←⊂'Posn'(125 10)
+          ∆,←⊂'Posn'(115 5)
           ∆,←⊂'Caption' 'Result (IDs) is displayed in the status bar.'
           'ff.info3'⎕WC ∆
          
           ∆←⊂'Button'
           ∆,←⊂'Style' 'Check'
-          ∆,←⊂'Caption' 'Ignore column "Author" names'
+          ∆,←⊂'Caption' 'Not in "Author" names'
           ∆,←⊂'State' 1
-          ∆,←⊂'Posn'((ff.Size[1]-80),12)
+          ∆,←⊂'Posn'((ff.Size[1]-60),7)
           'ff.names'⎕WC ∆
          
           ∆←⊂'Button'
           ∆,←⊂'Caption' 'OK'
           ∆,←⊂'Default' 1
-          ∆,←⊂'Posn'((ff.Size[1]-35),10)
+          ∆,←⊂'Posn'((ff.Size[1]-30),5)
           ∆,←⊂'Size'(⍬ 120)
           ∆,←⊂'Event' 'Select' 1
           'ff.ok'⎕WC ∆
@@ -1487,7 +1514,7 @@
           ∆←⊂'Button'
           ∆,←⊂'Caption' 'Cancel'
           ∆,←⊂'Cancel' 1
-          ∆,←⊂'Posn'(ff.Size-35 130)
+          ∆,←⊂'Posn'(ff.Size-30 125)
           ∆,←⊂'Size'(⍬ 120)
           ∆,←⊂'Event' 'Select' 1
           'ff.cancel'⎕WC ∆
@@ -1495,7 +1522,7 @@
           ⎕NQ'ff.e' 'GotFocus' ⋄ res←⎕DQ'ff'
           :If 0≠≢res
           :AndIf 'ff.ok'≡1⊃res
-          :AndIf 0<≢∆SearchFor←ff.e.Text
+              ∆SearchFor←ff.e.Text
               listObj←{⍵.list}⍎{'FF.f.tc.sf',⍕⍵}⍎¯1↑⍕FF.f.tc.TabObj
               searchIn←{⍵.ReportInfo[;2 3 6 7]}listObj
               searchIn←(-2×ff.names.State)↓[2]searchIn
@@ -1505,9 +1532,7 @@
                   'ms'⎕WC'MsgBox' 'Compare: not hits'('Search string "',∆SearchFor,'" not found')
                   ⎕DQ'ms'
               :Else
-                  FF.f.sb.Info.Text←'Hits in: ',⊃{⍺,',',⍵}/∆Hits
-                  {}{2 ⎕NQ FF.f.tc.sf2.list'SetItemState' ⍵}¨¯1+⍳≢FF.f.tc.sf2.list.Items
-∘∘∘  ⍝TODO⍝ This does not work at all --- why????  {}2 ⎕NQ FF.f.tc.sf2.list'SetItemState'(⊃⊃(//)⎕VFI⊃∆Hits)3
+                  FF.f.sb.Info.Text←'Hits in:',⍕∆Hits
               :EndIf
           :EndIf
         ∇
@@ -1648,7 +1673,6 @@
     IsFile←{(∨/':/\'∊⍵)∨'file://'{⍺≡(⍴⍺)↑⍵}⍵}       ⍝ Used to identify filename
 
       List←{
-          ⍝r←⍵{ ⊃∇/⍺.(⍺{(0,⍵)/⍨0,(⍺≠⍵)∧⍺=⍵.##}⍎⍕'⍺',⌽⎕NL-9.1),⊂⍵,⍺}⍬
           r←⍵{⍺.(⍺{(0,⍵)/⍨0,(⍺≠⍵)∧⍺=⍵.##}⍎⍕'⍺',⌽⎕NL-9.1),⊂⍵,⍺}⍬
           (0=≢r←(⍬∘≡¨⍴¨r)/r):⍬
           _←{⍵.⎕DF ⎕NULL}¨r
@@ -1745,7 +1769,7 @@
       :EndIf
     ∇
 
-    ∇ r←PolishRubbishReport(ref1 ref2 report1 report2 refsAreRubbish dropFromRubbish);thisReport;data;type;buffer;ind;thisTitle
+    ∇ r←PolishRubbishReport(ref1 ref2 rubbish parms);thisReport;data;type;buffer;ind;thisTitle
       ⍝ Is a vector that contains all data for both, ref1 and ref2.
       ⍝ The lines starting with "* " tell the starting points for ref1/ref2.
       ⍝ Each has a vector of two-item-vector:
@@ -1754,16 +1778,16 @@
       ⍝ Each type can occur zero, once or many times. This function makes sure
       ⍝ that they occure either zero or exactly one time
       r←''
-      :For thisReport thisTitle :InEach (report1 report2)(⍕¨ref1 ref2)
+      :For thisReport thisTitle :InEach (rubbish.(report1 report2))(⍕¨ref1 ref2)
           :If 0≠≢thisReport
-              r,←⊂dropFromRubbish↓thisTitle
+              r,←⊂parms.refsAreRubbish↓thisTitle
               buffer←0 2⍴''
               :For type data :In thisReport
                   :If (⊂type)∊buffer[;1]
                       ind←buffer[;1]⍳⊂type
-                      buffer[ind;2]←⊂∪(ind⊃buffer[;2]),(dropFromRubbish↓¨data)
+                      buffer[ind;2]←⊂∪(ind⊃buffer[;2]),(parms.refsAreRubbish↓¨data)
                   :Else
-                      buffer⍪←type(dropFromRubbish↓¨data)
+                      buffer⍪←type(parms.refsAreRubbish↓¨data)
                   :EndIf
               :EndFor
               :If 0≠≢buffer
