@@ -1,4 +1,4 @@
- R←Test_Merge_002(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6
+ R←Test_Merge_002(stopFlag batchFlag);⎕TRAP;buffer;rf1;rf2;rfa;rfb;rf_;code;∆;rep;Match;Isolate;expected1;expected3;expected2;expected4;expected5;expected6;parms
 ⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in [1] only
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
  R←T._Failed
@@ -45,19 +45,20 @@
 
 ⍝⍝⍝ Processing....
 ⍝buffer←##.Compare.Merge rf1 rf2
- buffer←¯1 ##.Compare.Merge rf1 rf2
+ parms←##.Compare.CreateMergeParms
+ parms.readOnly←¯1
+ buffer←parms ##.Compare.Merge rf1 rf2
 
 ⍝⍝⍝ Checking
  rep←##.APLTreeUtils2.DLB 2⊃buffer
  →T.GoToTidyUp 0=≢rep
- expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
- →T.GoToTidyUp~expected1 Match rep Isolate'Empty Namespaces:'
- expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
- →T.GoToTidyUp~expected2 Match rep Isolate'Class Instances:'
- expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
- expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
- →T.GoToTidyUp~expected3 Match rep Isolate'Namespace references:'
- →T.GoToTidyUp 0≠≢({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2,expected3
+ rep←(':'∊¨rep)⊂rep
+ expected1←'Namespace references:'  '#.Rubbish1.RefToEmptyUnnamed1'  '#.Rubbish1.RefToEmptyUnnamed2'  '#.Rubbish1.RefToOrdinaryNamedNamespace'  '#.Rubbish1.RefToUnnamedNS1'  '#.Rubbish1.RefToUnnamedNS2'  '#.Rubbish1.SubNSWithCode.CodeSub2'  '#.Rubbish1.SubNSWithCode.Empty'  '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →T.GoToTidyUp expected1≢1⊃rep
+ expected2←'Empty Namespaces:'  '#.Rubbish1.OrdinaryNamedNamespace'  '#.Rubbish1.HoldSubNamespaces.Sub1Empty'  '#.Rubbish1.ContainerB.EmptyAndNamed2'  '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →T.GoToTidyUp expected2≢2⊃rep
+ expected3←'Class Instances:' '#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
+ →T.GoToTidyUp expected3≢3⊃rep
 
  ⍝buffer←##.Compare.Merge rf1 rf2
  buffer←¯1 0 ##.Compare.Merge rf1 rf2
@@ -66,13 +67,13 @@
 ⍝⍝⍝ Checking
  rep←##.APLTreeUtils2.DLB 2⊃buffer
  →T.GoToTidyUp 0=≢rep
- expected1←'#.Rubbish1.OrdinaryNamedNamespace' '#.Rubbish1.HoldSubNamespaces.Sub1Empty' '#.Rubbish1.ContainerB.EmptyAndNamed2' '#.Rubbish1.ContainerA.EmptyAndNamed1'
- →T.GoToTidyUp~expected1 Match rep Isolate'Empty Namespaces:'
- expected2←'#.Rubbish1.MyLoggerInstance1' '#.Rubbish1.MyLoggerInstance2' '#.Rubbish1.MyLoggerInstance3'
- →T.GoToTidyUp~expected2 Match rep Isolate'Class Instances:'
- expected3←'#.Rubbish1.RefToEmptyUnnamed1' '#.Rubbish1.RefToEmptyUnnamed2' '#.Rubbish1.RefToOrdinaryNamedNamespace' '#.Rubbish1.RefToUnnamedNS1'
- expected3,←'#.Rubbish1.RefToUnnamedNS2' '#.Rubbish1.SubNSWithCode.CodeSub2' '#.Rubbish1.SubNSWithCode.Empty' '#.Rubbish1.SubNSWithCode.Sub1WithCode'
- →T.GoToTidyUp 0≠≢({⍵/⍨~':'∊¨⍵}1↓rep)~expected1,expected2
+ rep←(':'∊¨rep)⊂rep
+ expected1←'Namespace references:'  '#.Rubbish1.RefToEmptyUnnamed1'  '#.Rubbish1.RefToEmptyUnnamed2'  '#.Rubbish1.RefToOrdinaryNamedNamespace'  '#.Rubbish1.RefToUnnamedNS1'  '#.Rubbish1.RefToUnnamedNS2'  '#.Rubbish1.SubNSWithCode.CodeSub2'  '#.Rubbish1.SubNSWithCode.Empty'  '#.Rubbish1.SubNSWithCode.Sub1WithCode'
+ →T.GoToTidyUp expected1≢1⊃rep
+ expected2←'Empty Namespaces:'  '#.Rubbish1.OrdinaryNamedNamespace'  '#.Rubbish1.HoldSubNamespaces.Sub1Empty'  '#.Rubbish1.ContainerB.EmptyAndNamed2'  '#.Rubbish1.ContainerA.EmptyAndNamed1'
+ →T.GoToTidyUp expected2≢2⊃rep
+ expected3←'Class Instances:'  '#.Rubbish1.MyLoggerInstance1'  '#.Rubbish1.MyLoggerInstance2'  '#.Rubbish1.MyLoggerInstance3'
+ →T.GoToTidyUp expected3≢3⊃rep
 
  R←T._OK
 

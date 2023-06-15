@@ -3,9 +3,7 @@
 ⍝ ### Comparing
 ⍝ `Compare` offers a bunch of shared methods helpful to compare functions,
 ⍝ operators and scripts. Sources of those objects may live in the current
-⍝ workspace or on file (SALT/script files or acre component files).\\
-⍝ It also comes with a method to process an array as it is returned by
-⍝ acre's `Versions` method.
+⍝ workspace or on file (SALT/script files).\\
 ⍝ ### Restrictions
 ⍝ The `Merge` method worries about ordinary namespaces only. If you have
 ⍝ one of these in your workspace:
@@ -18,9 +16,8 @@
 ⍝ Note that you may have different views on whether references pointing to
 ⍝ unnamed namespaces should be considered temporary (used during runtime only).
 ⍝ If you do then the report won't fit your needs, and you won't be happy that
-⍝ `Compare` ignores all code found in such namespaces. You can however
-⍝ change this by setting the `refsAreRubbish` flag to 0; this is the second
-⍝ flag in the left argument of `Merge`.
+⍝ `Compare` ignores all code that lives in such namespaces. You can however
+⍝ change this by setting the `refsAreRubbish` flag to 0.
 ⍝ ### Merging
 ⍝ The class also offers methods to compare and even merge ordinary
 ⍝ namespaces. Since namespaces can hold everything, even a whole workspace,
@@ -39,12 +36,22 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '6.1.0-beta-2+24' '2023-02-28'
+      r←'Compare' '7.1.0+24' '2023-03-02'
     ∇
 
     ∇ History
       :Access Public Shared
-      ⍝ * 6.1.0
+      ⍝ * 7.1.0
+      ⍝   * Improved GUI
+      ⍝   * The "Find" now has a corresponding "Next" menu item, together with a "F3" short cut
+      ⍝   * Rubbish report was buggy
+      ⍝ * 7.0.0
+      ⍝   * BREAKING CHANGE: `Merge` returns always a two-item vector, and `readOnly←¯2`
+      ⍝     is not valid anymore though it is simply ignored when specified.
+      ⍝   * BREAKING CHANGE: `Merge` now requires a parameter space as optional left
+      ⍝     argument. Specifying one or two integers as `⍺` is now deprecated theough
+      ⍝     still supported for the time bing.
+      ⍝   * There is now a function `CreateMergeParms`
       ⍝   * Can now ignore #._tatin / ⎕SE._tatin
       ⍝   * Bug fixes
       ⍝     `Merge` had a problem
@@ -54,14 +61,6 @@
       ⍝   * BREAKING CHANGES:
       ⍝     Does not call any comparison tools itself anymore (not even via CompareSimple)
       ⍝     but tries to use ⎕se.CompareFiles or prints just the filenames to ⎕SE.
-      ⍝ * 5.0.1
-      ⍝   * Package config corrected
-      ⍝ * 5.0.0
-      ⍝   * BREAKING CHANGES:
-      ⍝     * Requires Dyalog 18.0 Unicode
-      ⍝     * Requires all dependencies to be Tatin packages
-      ⍝     * Does not include `APLTreeUtils` anymore but does requires the class `APLTreeUtils2` to be a sibling
-      ⍝     * Property `refToUtils` removed: all dependencies must now be siblings of `Compare`
       ⍝\\
       ⍝ For information regarding older versions see <https://github.com/aplteam/Compare/releases>
     ∇
@@ -73,16 +72,17 @@
       r←'{7B647151-E9A3-B54C-BAF7-7311E69DC8CC}'
     ∇
 
-    ∇ {r}←{parms}Merge(ref1 ref2);obj;rubbishReport;reftoGui;rubbish
+    ∇ {r}←{parms}Merge(ref1 ref2);obj;rubbishReport;reftoGui;data;buff
       :Access Public Shared
     ⍝ Useful to compare namespaces with each other.\\
     ⍝ The right argument must be references to the namespaces to be compared.\\
-    ⍝ `parms` is optional and defaults to what is returned by `CreateMegreParms:
+    ⍝ `parms` is optional and defaults to what is returned by `CreateMergeParms:
     ⍝ * `readOnly` controls the user's ability to change the code.
     ⍝   Might be a scalar or a vector of length two, one Boolean for each pane.
     ⍝   Defaults to 0, meaning the user can change everything.
-    ⍝ * `refsAreRubbish`: 1 means that refs are considered to be temporary
-    ⍝   and therefore they need to be reported as "rubbish". This is a highly
+    ⍝ * `refsAreRubbish`: 1 means that unnamed namespaces (which by definition
+    ⍝   are always represented by refs) are considered to be temporary and
+    ⍝   therefore they need to be reported as "rubbish". This is a highly
     ⍝   philosphical thing to decide, so we leave this to the user. Default is 1.
     ⍝ * `ignoreTatin`: Tatin packages are loaded into #._tatin or ⎕SE._tatin.
     ⍝   If this is 1 (the default) then these two namespace are ignored,
@@ -92,13 +92,18 @@
     ⍝ |`0`  | Allow user changes
     ⍝ |`1`  | Don't allow changes
     ⍝ |`¯1` | Don't show anything, just return data structures
-    ⍝ |`¯2` | Show the GUI but don't execute ⎕DQ
+    ⍝ |`¯2` | Deprecated and ignored
     ⍝ Result:\\
-    ⍝ Always a two-item vector with the differences reported in [1] and the rubbish
-    ⍝ reported in [2].
+    ⍝ Always a two-item vector with the differences reported in [1] and any
+    ⍝ rubbish reported in [2].
       (⎕ML ⎕IO)←3 1
       :If 0=⎕NC'parms'
           parms←CreateMergeParms
+      :EndIf
+      :If ∧/parms∊0 1 ¯2 ¯1  ⍝ Legacy: in old versions the left argument was just readOnly
+          buff←parms
+          parms←CreateMergeParms
+          parms.readOnly←buff
       :EndIf
       parms.readOnly←{(1=⍴,⍵):2⍴⍵ ⋄ (2=⍴⍵):⍵ ⋄ 'Invalid: "readOnly'⎕SIGNAL 11}parms.readOnly
       'Invalid: "refsAreRubbish'⎕SIGNAL 11/⍨{∧/(,¨⍵)≢¨,¨1 0}parms.refsAreRubbish
@@ -109,22 +114,27 @@
       (ref1 ref2)←{(0=≢⍵):⍵ ⋄ ⍎⍕⍵}¨ref1 ref2
       'ref1 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref1
       'ref2 is not a reference to a namespace'⎕SIGNAL 11/⍨0=IsNotScript ref2
-      rubbish←⎕NS''
-      rubbish.(report←report1←report2←objects1←objects2←⍬)
-      ns_ ref1 ref2 rubbish parms
-      rubbishReport←PolishRubbishReport ref1 ref2 rubbish parms
-      :If 0=≢rubbish.report←⊃rubbish.report
+      data←⎕NS''
+      data.(report←report1←report2←rubbish1←rubbish2←objects1←objects2←⍬)
+      ns_ ref1 ref2 data parms
+      rubbishReport←PolishRubbishReport ref1 ref2 data parms
+      :If 0=≢data.report←⊃data.report
           r←''rubbishReport
       :Else
-          obj←⎕NEW CompareData(ref1 ref2 rubbish.report)
-          :If ∧/parms.readOnly∊0 1 ¯2
-              reftoGui←DisplayDiff obj parms.readOnly(2⊃Version)rubbishReport
-          :EndIf
-          :If ¯2∊parms.readOnly
-              r←rubbish.report rubbishReport reftoGui
+          obj←⎕NEW CompareData(ref1 ref2 data.report)
+          :If 0<parms.⎕NC'n'
+              parms.n.parms←parms
           :Else
-              r←rubbish.report rubbishReport
+              parms.n←⍬
           :EndIf
+          :If ∧/parms.readOnly∊0 1 ¯2
+              :If 0=parms.⎕NC'n'
+                  reftoGui←DisplayDiff obj parms.readOnly(2⊃Version)rubbishReport
+              :Else
+                  reftoGui←parms.n DisplayDiff obj parms.readOnly(2⊃Version)rubbishReport
+              :EndIf
+          :EndIf
+          r←data.report rubbishReport
       :EndIf
     ∇
 
@@ -134,13 +144,18 @@
       r.readOnly←0 0
       r.refsAreRubbish←1
       r.ignoreTatin←1
+      r.dropFromTitle←0
     ∇
 
-    ∇ {reftoGui}←DisplayDiff(diff readOnly versionNo rubbish)
+    ∇ {r}←{n}DisplayDiff(diff readOnly versionNo data)
     ⍝ Designed to display the result of `Merge`.
-    ⍝ `readOnly` supresses everything that enables a user to change anything.\\
+    ⍝ `readOnly` supresses everything that enables a user to change anything.
+    ⍝ `n` is optional. When passed it must be the container with all refs of the GUI from which DisplayDiff got started.
+    ⍝ See ]CompareGUI for this
       (⎕IO ⎕ML)←1 3
-      reftoGui←Display.Diff diff readOnly versionNo rubbish
+      r←⍬
+      n←{0<⎕NC ⍵:⍎⍵ ⋄ ⍬}'n'
+      n Display.Diff diff readOnly versionNo data
     ∇
 
  ⍝⍝⍝⍝⍝ Private stuff
@@ -151,33 +166,6 @@
           0=+/⍵:''
           ,'ZI4,<->,ZI2,<->,ZI2,< >,ZI2,<:>,ZI2,<:>,ZI2'⎕FMT,[0.5]6↑,⍵
       }ts
-    ∇
-
-    ∇ r←{version}GetBodyFromAcreDcf filename;fno;versions;name;fnsVersion;body;ln
-    ⍝ Returns latest version (by default) from an acre component file
-      fno←filename ⎕FTIE 0
-      versions←-/⌽2↑⎕FSIZE fno
-      :If 0=⎕NC'version'
-          version←versions
-      :Else
-          :If ¯1=×version
-              version←versions+version
-          :EndIf
-      :EndIf
-      'Invalid version number'⎕SIGNAL 11/⍨~version∊⍳versions
-      :Trap 0
-          (name fnsVersion body)←⎕FREAD fno version
-      :Else
-          ⎕FUNTIE fno
-          11 ⎕SIGNAL⍨'File is not an acre file'
-      :EndTrap
-      body←{⍵⊂⍨⍵≠⎕UCS 10}body
-      :If ' '≠1↑0⍴ln←(⍎{⍵↓⍨-'.'⍳⍨⌽⍵}name).⎕FX body
-          ⎕←'Could not fix "',name,'", see line(s) ',⍕ln
-      :Else
-          ⎕←'Successfull fixed: "',name,'"'
-      :EndIf
-      ⎕FUNTIE fno
     ∇
 
     ∇ {R}←{wait}Run cmd;∆WAIT;windowStyle;wsh
@@ -218,7 +206,7 @@
       {}⎕DQ'ms'
     ∇
 
-    ∇ {r}←{recursionFlag}ns_(ref1 ref2 rubbish parms);list1;list2
+    ∇ {r}←{recursionFlag}ns_(ref1 ref2 data parms);list1;list2;buff
     ⍝ Doing the hard work of the comparison of namespaces:
     ⍝ 1. compare fns
     ⍝ 2. compare opr
@@ -231,36 +219,38 @@
       (list1 list2)←{0::'' ⋄ ' '~¨⍨↓⍵.⎕NL 3 4 9.1 9.4 9.5}¨ref1 ref2
       :If parms.ignoreTatin
           (list1 list2)←{⍵~⊂'_tatin'}¨list1 list2
-          list1←RemoverRefsToTatin ref1 list1
-          list2←RemoverRefsToTatin ref2 list2
+          list1←RemoveRefsToTatin ref1 list1
+          list2←RemoveRefsToTatin ref2 list2
       :EndIf
       :If '['∊(⍕ref1),⍕ref2
           ⎕←'Cannot not compare ',(⍕ref1),'/',(⍕ref2) ⋄ :Return
       :EndIf
       list1←(ref1 __Get list1)/list1
       list2←(ref2 __Get list2)/list2
-      rubbish.report,←ProcessCode ref1 list1 list2 1    ⍝ Everything in [1] only
-      rubbish.report,←ProcessCode ref2 list2 list1 2    ⍝ Everything in [2] only
-      rubbish.report,←ScanCodeFoundInBothRefs(list1∩list2)ref1 ref2
+      data.report,←ProcessCode ref1 list1 list2 1    ⍝ Everything in [1] only
+      data.report,←ProcessCode ref2 list2 list1 2    ⍝ Everything in [2] only
+      data.report,←ScanCodeFoundInBothRefs(list1∩list2)ref1 ref2
       :If 0=recursionFlag
-          rubbish.(report1 objects1)←ReportRubbishIn ref1 rubbish.report1 rubbish.objects1 recursionFlag parms.refsAreRubbish
-          rubbish.(report2 objects2)←ReportRubbishIn ref2 rubbish.report2 rubbish.objects2 recursionFlag parms.refsAreRubbish
+          (data.rubbish1 data.objects1),←ReportRubbishIn ref1 data.report1 data.objects1 recursionFlag parms.refsAreRubbish
+          (data.rubbish2 data.objects2),←ReportRubbishIn ref2 data.report2 data.objects2 recursionFlag parms.refsAreRubbish
       :EndIf
       (list1 list2)←{(0=≢⍵):'' ⋄ List ⍵}¨ref1 ref2
       :If parms.ignoreTatin
           (list1 list2)←{⍵~⊂'_tatin'}¨list1 list2
           list1 list2←ref1 ref2{⍵/⍨((⍕⍺),'._tatin')∘≢¨⍕¨⍵}¨list1 list2
       :EndIf
-      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref1 ref2 list1 list2 1 rubbish parms
-          rubbish.(report1 objects1)←ReportRubbishIn ref1 rubbish.report1 rubbish.objects1 1 parms.refsAreRubbish
+      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref1 ref2 list1 list2 1 data parms
+          buff←ReportRubbishIn ref1 data.report1 data.objects1 1 parms.refsAreRubbish
+          (data.rubbish1 data.objects1)←(data.rubbish1 data.objects1),¨buff
       :EndIf
-      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref2 ref1 list2 list1 2 rubbish parms
-          rubbish.(report2 objects2)←ReportRubbishIn ref2 rubbish.report2 rubbish.objects2 1 parms.refsAreRubbish
+      :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref2 ref1 list2 list1 2 data parms
+          buff←ReportRubbishIn ref2 data.report2 data.objects2 1 parms.refsAreRubbish
+          (data.rubbish2 data.objects2)←(data.rubbish2 data.objects2),¨buff
       :EndIf
-      ScanOrdinaryNamespacesInBothRefs ref1 ref2 rubbish parms
+      ScanOrdinaryNamespacesInBothRefs ref1 ref2 data parms
     ∇
 
-    ∇ list←RemoverRefsToTatin(ref list);bool;bool2
+    ∇ list←RemoveRefsToTatin(ref list);bool;bool2
       :If 0<≢list
       :AndIf ∨/bool←9.1=↑∘ref.⎕NC¨⊂¨list
       :AndIf ∨/~bool2←~∨/¨((⍕ref),'._tatin.')∘⍷¨⍕¨ref{⍺⍎⍵}¨bool/list
@@ -268,7 +258,7 @@
       :EndIf
     ∇
 
-    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind rubbish parms);list;this
+    ∇ {r}←refsAreRubbish ProcessUniqueObjects(ref1 ref2 list1 list2 ind data parms);list;this
     ⍝ Loop over all ordinary (non-scripted) namespaces that exist in `ref1` only
       r←1
       :If 0≠≢list1
@@ -281,28 +271,28 @@
       :AndIf 0≠≢list←{(0=↑∘⍴∘Display.GetBody¨⍕¨⍵)/⍵}list
           :For this :In list
               r←0
-              1 ns_(ind⊃(this ⍬)(⍬ this)),rubbish parms
+              1 ns_(ind⊃(this ⍬)(⍬ this)),data parms
           :EndFor
       :EndIf
     ∇
 
 
-    ∇ buffer←ProcessCode(ref list1 list2 no);bool;list;buffer
+    ∇ r←ProcessCode(ref list1 list2 no);bool;list
     ⍝ Any stuff that is "code" (fns, opr, script)
-      buffer←''
+      r←''
       :If 1∊bool←~list1∊list2
           list←bool/list1
-          buffer←(+/bool)⍴⍕no       ⍝ indicator
-          buffer,¨←⊂¨bool/list1     ⍝ name1
-          buffer,¨←⊂⊂''             ⍝ path1
-          buffer,¨←⊂⊂''             ⍝ path2
-          ((2+no)⊃¨buffer)←⊂⍕ref    ⍝ The actual assignment
-          buffer,¨←GetNameClass∘{⍵[3 2]}¨buffer ⍝ type of 1
-          buffer,¨←GetNameClass∘{⍵[4 2]}¨buffer ⍝ type of 2
-          buffer,¨←⊂¨FormatTS¨{0::⍬ ⋄ 2 ⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[3 2]}¨buffer ⍝ Last change of 1
-          buffer,¨←⊂¨FormatTS¨{0::⍬ ⋄ 2 ⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[4 2]}¨buffer ⍝ Last change of 2
-          buffer,¨←⊂¨{0::'' ⋄ 4⊃⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[3 2]}¨buffer ⍝ author of 1
-          buffer,¨←⊂¨{0::'' ⋄ 4⊃⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[4 2]}¨buffer ⍝ author of 2
+          r←(+/bool)⍴⍕no       ⍝ indicator
+          r,¨←⊂¨bool/list1     ⍝ name1
+          r,¨←⊂⊂''             ⍝ path1
+          r,¨←⊂⊂''             ⍝ path2
+          ((2+no)⊃¨r)←⊂⍕ref    ⍝ The actual assignment
+          r,¨←GetNameClass∘{⍵[3 2]}¨r ⍝ type of 1
+          r,¨←GetNameClass∘{⍵[4 2]}¨r ⍝ type of 2
+          r,¨←⊂¨FormatTS¨{0::⍬ ⋄ 2 ⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[3 2]}¨r ⍝ Last change of 1
+          r,¨←⊂¨FormatTS¨{0::⍬ ⋄ 2 ⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[4 2]}¨r ⍝ Last change of 2
+          r,¨←⊂¨{0::'' ⋄ 4⊃⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[3 2]}¨r ⍝ author of 1
+          r,¨←⊂¨{0::'' ⋄ 4⊃⎕AT ⍵}¨{{⍺,'.',⍵}/⍵[4 2]}¨r ⍝ author of 2
       :EndIf
     ∇
 
@@ -341,7 +331,7 @@
       :EndFor
     ∇
 
-    ∇ {r}←ScanOrdinaryNamespacesInBothRefs(ref1 ref2 rubbish parms);list1;list2;lista;listb;this;list
+    ∇ {r}←ScanOrdinaryNamespacesInBothRefs(ref1 ref2 data parms);list1;list2;lista;listb;this;list
     ⍝ Loop over all ordinary (non-scripted) namespaces that exist in both, [1] and [2]
       r←⍬
       (list1 list2)←ListOrdinaryNamespaces¨ref1 ref2
@@ -357,8 +347,8 @@
               list2/⍨←((⍕ref2),'._tatin'){(⍺,'.')∘≢¨'.',⍨¨(≢⍺)↑¨⍕¨⍵}list2
           :EndIf
       :EndIf
-      list1~←rubbish.objects1
-      list2~←rubbish.objects2
+      list1~←data.objects1
+      list2~←data.objects2
       :If 0≠≢≢¨list1 list2
       :AndIf 0∧.<≢¨⍕¨ref1 ref2 ⍝ both must be alive for that
           lista←((1+⍴⍕ref2)↓¨⍕¨list2){⍺/⍨⍺∊⍵}((1+⍴⍕ref1)↓¨⍕¨list1)
@@ -369,7 +359,7 @@
               :If 9.1=⎕NC⊂(⍕ref2),'.',this
               :AndIf {11 16::1 ⋄ 0⊣⎕SRC ⍵}⍎(⍕ref2),'.',this        ⍝ pass if it is an ordinary namespace
               :AndIf ref1 ref2≢{6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2
-                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),rubbish parms
+                  1 ns_({6::⍬ ⋄ ⍎⍵}¨this∘{(⍕⍵),'.',⍺}¨ref1 ref2),data parms
               :EndIf
           :EndFor
       :EndIf
@@ -689,6 +679,20 @@
               Report
           }
 
+        ∇ OnNext msg;ref;id
+          ref←GetCurrentTab'list'
+          id←⊃∆Hits
+          ref.SelItems[]←0
+          SetFocusTo ref(ref.Items⍳⊂id)
+          ∆Hits←1↓∆Hits
+          :If 0=≢∆Hits
+              FF.f.sb.Info.Text←''
+              ref.##.##.##.mb.search.next.Active←0
+          :Else
+              FF.f.sb.Info.Text←'Hits for <',∆SearchFor,'> in:',⍕∆Hits
+          :EndIf
+        ∇
+
         ∇ Report;fn1;fn2;rf;rep;thisContainer;i;thisObj;body;thisFile;_;buf;title1;title2;A;F;parms;exe;name
         ⍝ Produces a report regarding the differnces
           A←##.##.APLTreeUtils2
@@ -972,27 +976,21 @@
           :EndIf
         ∇
 
-        ∇ {FF}←Diff(refToDiff readOnly versioNo rubbish);ref1;ref2;I;FF;res
-        ⍝ refToDiff is a data structure created by `Merge`.
-        ⍝
-        ⍝ Note that this gets changed by `Display`: all actions are logged on the `Journal`.
-         
+        ∇ {r}←n Diff(refToDiff readOnly versioNo data);ref1;ref2;I;FF;res;r
+        ⍝ refToDiff is a data structure created by `Merge`.\\
+        ⍝ Note that this gets changed by `Display`: all actions are logged on the `Journal`.\\
         ⍝ ref1 and ref2: what got compared (for building an appropriate caption).
           :Access Public Shared
           Init readOnly
           (ref1 ref2)←refToDiff.(refToContainer1 refToContainer2)
           I←refToDiff ⍝ for indexing only
-          FF←CreateDiffGui ref1 ref2 I versioNo readOnly refToDiff
-          :If ∧/~¯2∊readOnly
-              ShowRubbishWarning rubbish FF.f.Posn
-          :EndIf
-          :If ∧/~¯2∊readOnly
-              res←'FF.f.tc.sf2.list'DQ'FF.f'
-          :EndIf
-      ⍝Done
+          n CreateDiffGui ref1 ref2 I versioNo readOnly refToDiff
+          ShowRubbishWarning data FF.f.Posn
+          r←'FF.f.tc.sf2.list'DQ'FF.f'
         ∇
 
-        ∇ FF←CreateDiffGui(ref1 ref2 I versioNo readOnly refToDiff);caption;colTitles;parms
+        ∇ {r}←n CreateDiffGui(ref1 ref2 I versioNo readOnly refToDiff);caption;colTitles;parms
+          r←⍬
           'FF'⎕NS''
           caption←∆Caption,' ',(⍕versioNo),': ',(⍕ref1),' [1] :: ',(⍕ref2),' [2]'
           colTitles←'ID' '?' 'Name' 'Path' 'Type 1' 'Type 2' 'Author 1' 'Author 2'
@@ -1005,6 +1003,9 @@
           parms,←⊂'Caption'caption
           parms,←⊂'Icon' 'AppIcon'
           'FF.f'⎕WC parms
+          :If ~(⊂n)∊''⍬
+              FF.f.Posn←n.theForm.Posn+40
+          :EndIf
          
           'FF.f.tc'⎕WC'TabControl'('Attach'('Top' 'Left' 'Bottom' 'Right'))('TabFocus' 'Never')
           FF.f.tc.Size-←30 0
@@ -1020,15 +1021,23 @@
           'FF.f.mb.file'⎕WC'Menu' '&File'
           'FF.f.mb.file.quit'⎕WC'MenuItem' 'Quit'('Event' 'Select' 1)('Accelerator'(115 4))
          
-          'FF.f.mb.edit'⎕WC'Menu' '&Edit'
-          'FF.f.mb.edit.search'⎕WC'MenuItem' 'Search'('Event' 'Select' 'OnSearch')('Accelerator'(70 2))
-          :If ∨/~readOnly∊1 ¯1 ¯2
-              'FF.f.mb.edit.show'⎕WC'MenuItem' 'Show journal'('Event' 'Select' 'Show')
+          'FF.f.mb.search'⎕WC'Menu' 'Search'
+          'FF.f.mb.search.start'⎕WC'MenuItem'('Search',(⎕UCS 9),'Ctrl+F')('Event' 'Select' 'OnSearch')('Accelerator'(70 2))
+          'FF.f.mb.search.next'⎕WC'MenuItem'('Next hit',(⎕UCS 9),'F3')('Event' 'Select' 'OnNext')('Active' 0)('Accelerator'(114 0))
+         
+          'FF.f.mb.reports'⎕WC'Menu' '&Reports'
+          'FF.f.mb.reports.diffs'⎕WC'MenuItem' 'Report differences'('Event' 'Select' 'OnReport')
+          :If ∨/~readOnly∊1 ¯1
+              'FF.f.mb.reports.journal'⎕WC'MenuItem' 'Show journal'('Event' 'Select' 'Show')
           :EndIf
-          'FF.f.mb.edit.report'⎕WC'MenuItem' 'Report different code'('Event' 'Select' 'OnReport')
          
           'FF.f.mb.help'⎕WC'Menu' '&Help'
-          'FF.f.mb.help.help'⎕WC'MenuItem' 'Help'('Event' 'Select' 'OnHelp')('Accelerator'(112 0))
+          'FF.f.mb.help.help'⎕WC'MenuItem'('Help',(⎕UCS 9),'F1')('Accelerator'(112 0))
+          :If (⊂n)∊⍬''
+              'FF.f.mb.help.help'⎕WS⊂'Event' 'Select' 'OnHelp'
+          :Else
+              'FF.f.mb.help.help'⎕WS⊂'Event' 'Select' 'OnHelp'n.parms.readOnly
+          :EndIf
           'FF.f.mb.help.sep1'⎕WC'Separator'
           'FF.f.mb.help.about'⎕WC'MenuItem' 'About'('Event' 'Select' 'OnAbout')
          
@@ -1044,7 +1053,7 @@
           parms,←⊂'GridLines' 1
           parms,←⊂'Event' 'ItemDown' 'OnItemDown' 1
           parms,←⊂'Event' 9999 'OnItemDown' 1
-          :If ~readOnly[1]∊1 ¯1 ¯2
+          :If ~readOnly[1]∊1 ¯1
               parms,←⊂'Event' 'ItemDblclick' 'OnItemDblClick' 1
           :EndIf
           parms,←⊂'Event' 'ContextMenu' 'OnContextMenu' 1
@@ -1067,7 +1076,7 @@
           parms,←⊂'3D' 'Recess'
           parms,←⊂'GridLines' 1
           parms,←⊂'Event' 'ItemDown' 'OnItemDown' 2
-          :If ~readOnly[2]∊1 ¯2 ¯1
+          :If ~readOnly[2]∊1 ¯2
               parms,←⊂'Event' 'ItemDblclick' 'OnItemDblClick' 2
           :EndIf
           parms,←⊂'Event' 'ContextMenu' 'OnContextMenu' 2
@@ -1090,11 +1099,11 @@
           FF.f.tc.Size+←1 ⋄ ⎕DL 0.01 ⋄ FF.f.tc.Size-←1  ⍝ To circumvent the ugly display of the ColTitles
         ∇
 
-        ∇ {r}←ShowRubbishWarning(rubbish mainFormPosn);∆;n
-        ⍝ If "rubbish" is not empty a warning is shown.
-        ⍝ This is about references to unnamed namespaces, instances & attached namespaces.
+        ∇ {r}←ShowRubbishWarning(data mainFormPosn);∆;n
+        ⍝ If "data" is not empty a warning is shown.
+        ⍝ This is about references to unnamed namespaces, instances, attached namespaces...
           r←⍬
-          :If 0≠≢rubbish
+          :If 0≠≢data
               n←⎕NS''
               ∆←''
               ∆,←⊂'Caption' 'Rubbish Report'
@@ -1104,10 +1113,6 @@
               ∆,←⊂'Event'(9999 1)
               n.Form←⎕NEW'Form'∆
          
-              n.MB←n.Form.⎕NEW(,⊂'Menubar')
-              n.CmdMenu←n.MB.⎕NEW'Menu'(,⊂'Caption' 'Commands')
-              n.PrintMenuCmd←n.CmdMenu.⎕NEW'MenuItem'(,⊂'Caption' 'Print )Erase to session')
-              n.PrintMenuCmd.onSelect←'OnPrintMenuCmd'
               n.Font←⎕NEW'Font'(('Pname' 'APL385 Unicode')('Size' 16))
          
               ∆←''
@@ -1118,7 +1123,7 @@
               ∆,←⊂'ReadOnly' 1
               ∆,←⊂'Font'n.Font
               ∆,←⊂'Style' 'Multi'
-              ∆,←⊂'Text'(##.##.APLTreeUtils2.DTB rubbish)
+              ∆,←⊂'Text'(##.##.APLTreeUtils2.DTB data)
               ∆,←⊂'Event'(9999 1)
               ∆,←⊂'VScroll' ¯1
               n.Show←n.Form.⎕NEW'Edit'∆
@@ -1212,7 +1217,7 @@
 
         ∇ r←GetTabNo objName
         ⍝ Returns the tab number from the objName
-        ⍝ The rule is: any object name looke like:
+        ⍝ The rule is: any object name looks like
         ⍝ either f.tc.sf1.list or f.tc.sf2.list
         ⍝ But watch for full refences!!
           r←{⍵⊂⍨'.'=⍵}⍕objName
@@ -1247,6 +1252,26 @@
               r←↓⎕FMT r
           :EndIf
         ∇
+
+        ∇ {r}←SetFocusTo(rf row);hnd;b;LVM_ENSUREVISIBLE;sendmsg
+          {}'sendmsg'⎕NA'I4 USER32|SendMessageW U4 U4 U4 U4'
+          hnd←rf.Handle
+          b←rf GetItemState row
+          b[1 2]←1
+          {}2 ⎕NQ rf'SetItemState'row(Power2 b)   ⍝ Don't call the method: bug 10925
+          LVM_ENSUREVISIBLE←4115
+          {}sendmsg hnd LVM_ENSUREVISIBLE row 1
+          r←0
+        ∇
+
+        Power2←{⎕io←0 ⋄ +/⍵/2*⍳32}
+
+
+          GetItemState←{
+      ⍝ ⍺ is ref to the ListView. ⍵ is single item number
+              rf←⍺
+              ⌽(32⍴2)⊤2 ⎕NQ rf'GetItemState'⍵   ⍝ Don't call the method: bug 10925
+          }
 
         ∇ OnAbout;ff;txt;myFnt
           'myFnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
@@ -1292,11 +1317,11 @@
               'mm'⎕WC'Menu'
               'mm.cancel'⎕WC'MenuItem' 'Cancel'
               'mm.sep1'⎕WC'Separator'
-              :If ~∨/readOnly∊1 ¯1 ¯2
+              :If ~∨/readOnly∊1 ¯1
                   'mm.edit'⎕WC'MenuItem'('Edit',tab,'Ctrl+Enter')('Active'((1=⍴,objName1)∧0∨.<⊃¨⎕NC¨objName1 objName2))
               :EndIf
               'mm.compare'⎕WC'MenuItem'('Compare',tab,'=')('Active'((1=⍴,⍴objName1)∧0∧.<⊃¨⎕NC¨objName1 objName2))
-              :If ~∨/readOnly∊1 ¯1 ¯2
+              :If ~∨/readOnly∊1 ¯1
                   'mm.copyTo_2'⎕WC'MenuItem'('Copy [1] to [2]',tab,'Ctrl+{CursorRight}')('Active'(0∨.<⎕NC objName1))
                   'mm.copyTo_1'⎕WC'MenuItem'('Copy [2] to [1]',tab,'Ctrl+{CursorLeft}')('Active'(0∨.<⎕NC objName2))
                   'mm.show'⎕WC'MenuItem' 'Show journal for this ID'('Active'(0<⍴,refToDiff.GetRemark id))
@@ -1336,21 +1361,15 @@
           r←0
         ∇
 
-        ∇ OnPrintMenuCmd msg;data
-        ⍝ Prints ")erase " coomands for allo objects reported to the session
-          ⎕←(⎕PW-1)⍴'-'
-          data←↑n.Show.Text
-          data⌿⍨←data[;1]=' '           ⍝ Drop titles
-          data←(data∨.='#')⌿data
-          ⎕←↑')ERASE '∘,¨↓##.APLTreeUtils2.DLB data
-        ∇
-
-        ∇ OnHelp;ff;txt;myFnt
+        ∇ {readOnly}OnHelp msg;ff;txt;myFnt;ref;refToMain
+          readOnly←{0<⎕NC ⍵:⍎⍵ ⋄ 0}'readOnly'
           'myFnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
-          'ff'⎕WC'Form'(∆Caption,': Help')('Coord' 'Pixel')('Posn'(75 45))('Size'(500 550))
+          'ff'⎕WC'Form'(∆Caption,': Help')('Coord' 'Pixel')('Posn'(75 45))('Size'(500 800))
+          refToMain←{'Form'≡⍵.Type:⍵ ⋄ ∇ ⍵.##}⍎1⊃msg
+          ff.Posn←40+refToMain.Posn
           'ff.e'⎕WC'Edit'('Coord' 'Prop')('Posn'(0 0))('Size'(100 100))('Style' 'Multi')('Event' 'GotFocus' 'OnGotFocus')('FontObj' 'myFnt')('VScroll' ¯1)
           txt←''
-          txt,←⊂'Designed to help merging two namespaces.'
+          txt,←⊂'Designed to compare or help merging two namespaces.'
           txt,←⊂'In fact you can merge even workspaces by making sure that a particular namespace holds one workspace and another one the second workspace.'
           txt,←⊂''
           txt,←⊂'1 Available in [1] only'
@@ -1359,15 +1378,16 @@
           txt,←⊂'≠ Same type but they differ'
           txt,←⊂'≢ Objects have different types'
           txt,←⊂''
-          txt,←⊂'- To sort the list by a column, click the column title'
-          txt,←⊂'- To reverse the sort direction, hold the Ctrl while clicking the col title'
-          txt,←⊂''
-          txt,←⊂'- Press <Ctrl+Enter> on a line to edit'
-          txt,←⊂'- Press = on a line to compare'
-          txt,←⊂'- Press <Del> to delete an object from the list'
-          txt,←⊂'- Press <Ctrl+Del> to delete an object from the workspace'
-          txt,←⊂'- Press <Ctrl+{CursorRight}> to copy [1] to [2]'
-          txt,←⊂'- Press <Ctrl+{CursorLeft}> to copy [2] to [1]'
+          txt,←⊂'* To sort the list by a column, click the column title'
+          txt,←⊂'* To reverse the sort direction, hold the Ctrl while clicking the col title'
+          txt,←⊂'* Press = on a line to compare'
+          :If 0∊readOnly
+              txt,←⊂'* Press <Ctrl+Enter> on a line to edit'
+              txt,←⊂'* Press <Del> to delete an object from the list'
+              txt,←⊂'* Press <Ctrl+Del> to delete an object from the workspace'
+              txt,←⊂'* Press <Ctrl+{CursorRight}> to copy [1] to [2]'
+              txt,←⊂'* Press <Ctrl+{CursorLeft}> to copy [2] to [1]'
+          :EndIf
           ff.e.Text←txt
           'ff.close'⎕WC'Button' 'Close'('Posn'(¯10 ¯10))('Size'(2 2))('Cancel' 1)('Event' 'Select' 1)('Attach'(4⍴'Top' 'Left'))
           ⎕DQ'ff'
@@ -1415,28 +1435,28 @@
               :Select code
               :Case 10 13 2 ⍝ Enter
                   :If flag
-                  :AndIf ~∨/readOnly∊1 ¯1 ¯2
+                  :AndIf ~∨/readOnly∊1 ¯1
                       Edit row(⍕objRef)
                   :EndIf
               :Case 61 187 0 ⍝ = for "Compare"
                   :If flag
-                      Compare row objRef(readOnly∊1 ¯1 ¯2)
+                      Compare row objRef(readOnly∊1 ¯1)
                       ⎕NQ objRef'GotFocus'
                   :EndIf
               :Case 0 46 2 ⍝ Ctrl+Del (delete from workspace)
-                  :If ~∨/readOnly∊1 ¯1 ¯2
+                  :If ~∨/readOnly∊1 ¯1
                       Delete id objName
                   :EndIf
               :Case 0 39 2 ⍝ Ctrl+CursorRight
-                  :If ~∨/readOnly∊1 ¯1 ¯2
+                  :If ~∨/readOnly∊1 ¯1
                       Copy 1 2 row objName
                   :EndIf
               :Case 0 37 2 ⍝ Ctrl+CursorLeft
-                  :If ~∨/readOnly∊1 ¯1 ¯2
+                  :If ~∨/readOnly∊1 ¯1
                       Copy 2 1 row objName
                   :EndIf
               :Case 0 46 0 ⍝ Del: delete from list, NOT from the workspace
-                  :If ~∨/readOnly∊1 ¯1 ¯2
+                  :If ~∨/readOnly∊1 ¯1
                       RemoveFromList tabNo objName id
                   :EndIf
               :Else
@@ -1454,7 +1474,7 @@
           }ts
         ∇
 
-        ∇ OnSearch msg;∆;ff;res;ref;bool;searchIn;listObj;ms
+        ∇ OnSearch msg;∆;ff;res;ref;bool;searchIn;listObj;ms;id
           ∆←⊂'Form'
           ∆,←⊂'Coord' 'Pixel'
           ∆,←⊂'Caption'(∆Caption,': Search')
@@ -1464,6 +1484,9 @@
           ∆,←⊂'MaxButton' 0
           ∆,←⊂'SysMenu' 0
           'ff'⎕WC ∆
+         
+          ref←{'Form'≡⍵.Type:⍵ ⋄ ∇ ⍵.##}⍎1⊃msg
+          ff.Posn←40+ref.Posn
          
           'DefaultFnt'⎕WC'Font' 'MS Sans Serif'
           ff.FontObj←DefaultFnt
@@ -1523,16 +1546,24 @@
           :If 0≠≢res
           :AndIf 'ff.ok'≡1⊃res
               ∆SearchFor←ff.e.Text
-              listObj←{⍵.list}⍎{'FF.f.tc.sf',⍕⍵}⍎¯1↑⍕FF.f.tc.TabObj
-              searchIn←{⍵.ReportInfo[;2 3 6 7]}listObj
+              listObj←GetCurrentTab'list'
+              searchIn←listObj.ReportInfo[;2 3 6 7]
               searchIn←(-2×ff.names.State)↓[2]searchIn
               bool←∨/(⎕C ∆SearchFor)⍷⎕FMT ⎕C searchIn
               :If 0=≢∆Hits←bool/listObj.Items
+                  ref.mb.search.next.Active←0
                   ⎕EX'ff'
                   'ms'⎕WC'MsgBox' 'Compare: not hits'('Search string "',∆SearchFor,'" not found')
                   ⎕DQ'ms'
               :Else
-                  FF.f.sb.Info.Text←'Hits in:',⍕∆Hits
+                  id←⊃∆Hits
+                  ∆Hits←1↓∆Hits
+                  :If 0<≢∆Hits
+                      FF.f.sb.Info.Text←'Hits for <',∆SearchFor,'> in:',⍕∆Hits
+                      ref.mb.search.next.Active←1
+                  :EndIf
+                  listObj.SelItems[]←0
+                  SetFocusTo listObj(listObj.Items⍳⊂id)
               :EndIf
           :EndIf
         ∇
@@ -1562,11 +1593,12 @@
           :EndIf
         ∇
 
-        ∇ {id}Show dummy;res;txt;journal;_;ff
-  ⍝ Show the journal, either all entries or only those belonging to "id"
+        ∇ {id}Show msg;res;txt;journal;_;ff;ref;refToMain
+      ⍝ Show the journal, either all entries or only those belonging to "id"
           id←{0<⎕NC ⍵:⍎⍵ ⋄ ''}'id'
           journal←refToDiff.GetRemark id
-          'ff'⎕WC'Form'(∆Caption,': Journal')('Coord' 'Prop')
+          ref←⍎'ff'⎕WC'Form'(∆Caption,': Journal')('Coord' 'Prop')
+          refToMain←{'Form'≡⍵.Type:⍵ ⋄ ∇ ⍵.##}⍎1⊃msg
           'ff.fnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
           ff.FontObj←ff.fnt
 ⍝          ff.IconObj←AppIcon
@@ -1588,6 +1620,8 @@
           'ff.close'⎕WC _
           CorrectColSize ff.lv
           {⍵.Size+←1 ⋄ _←⎕DL 0.01 ⋄ ⍵.Size-←1}ff ⍝ To circumvent the ugly display of the ColTitles
+          ref.Coord←'Pixel'
+          ref.Posn←40+refToMain.Posn
           ⎕NQ'ff' 'GotFocus' ⋄ ⎕DQ'ff'
 ⍝Done
         ∇
@@ -1689,6 +1723,7 @@
     ⍝ * Refs pointing to namespaces
     ⍝ * Empty ordinary namespaces
     ⍝ * Instances
+      rubbishObjects←rubbishReport←''
       :If 0≠≢ref
           (buf rubbishObjects)←InvestigateNamespaces(ref rubbishObjects''refsAreRubbish)
           (buf rubbishObjects)←InvestigateInstances(ref rubbishObjects buf)
@@ -1698,8 +1733,12 @@
       :EndIf
     ∇
 
-    InvestigateClasses←{InvestigateClassesAndInterfaces ⍵, 9.4}
-    InvestigateInterfaces←{InvestigateClassesAndInterfaces ⍵, 9.5}
+      InvestigateClasses←{
+          InvestigateClassesAndInterfaces ⍵,9.4
+      }
+      InvestigateInterfaces←{
+          InvestigateClassesAndInterfaces ⍵,9.5
+      }
 
     ∇ (report rubbishObjects)←InvestigateInstances(ref rubbishObjects report);list;fn;msg;types;bool
     ⍝ Finally we deal with instances of all sorts.
@@ -1740,17 +1779,17 @@
     ∇ (report rubbishObjects)←InvestigateNamespaces(ref rubbishObjects report refsAreRubbish);list;fn;refs;bool;nn;bool2
     ⍝ First we deal with references pointing to namespaces, unnamed or otherwise
       :If 0≠≢list←ref.⎕NL-9.1                  ⍝ All namespaces
-          fn←(⊂(⍕ref),'.'),¨list                ⍝ Same but full name
-          bool←fn≢¨⍕¨GetDisplayFormat¨⍎¨fn      ⍝ 1=refs, 0=named namespaces
+          fn←(⊂(⍕ref),'.'),¨list               ⍝ Same but full name
+          bool←fn≢¨⍕¨GetDisplayFormat¨⍎¨fn     ⍝ 1=refs, 0=named namespaces
           :If 0≠≢refs←bool/fn                  ⍝ Are there any pure refrences?
               :If refsAreRubbish
                   report,←⊂'Namespace references:'refs
                   rubbishObjects,←refs
               :EndIf
           :EndIf
-          nn←(~bool)/fn                         ⍝ Named namespaces
+          nn←(~bool)/fn                        ⍝ Named namespaces
           :If 0≠≢nn                            ⍝ Any?
-          :AndIf 1∊bool2←{0=≢⍵.⎕NL⍳16}¨⍎¨nn     ⍝ Are they empty?
+          :AndIf 1∊bool2←{0=≢⍵.⎕NL⍳16}¨⍎¨nn    ⍝ Are they empty?
               report,←⊂('Empty Namespaces:')(bool2/nn)
               rubbishObjects,←bool2/nn
           :EndIf
@@ -1769,7 +1808,7 @@
       :EndIf
     ∇
 
-    ∇ r←PolishRubbishReport(ref1 ref2 rubbish parms);thisReport;data;type;buffer;ind;thisTitle
+    ∇ r←PolishRubbishReport(ref1 ref2 data parms);thisReport;data;type;buffer;ind;thisTitle
       ⍝ Is a vector that contains all data for both, ref1 and ref2.
       ⍝ The lines starting with "* " tell the starting points for ref1/ref2.
       ⍝ Each has a vector of two-item-vector:
@@ -1778,16 +1817,16 @@
       ⍝ Each type can occur zero, once or many times. This function makes sure
       ⍝ that they occure either zero or exactly one time
       r←''
-      :For thisReport thisTitle :InEach (rubbish.(report1 report2))(⍕¨ref1 ref2)
+      :For thisReport thisTitle :InEach (data.(rubbish1 rubbish2))(⍕¨ref1 ref2)
           :If 0≠≢thisReport
-              r,←⊂parms.refsAreRubbish↓thisTitle
+              r,←⊂parms.dropFromTitle↓thisTitle
               buffer←0 2⍴''
               :For type data :In thisReport
                   :If (⊂type)∊buffer[;1]
                       ind←buffer[;1]⍳⊂type
-                      buffer[ind;2]←⊂∪(ind⊃buffer[;2]),(parms.refsAreRubbish↓¨data)
+                      buffer[ind;2]←⊂∪(ind⊃buffer[;2]),parms.dropFromTitle↓¨data
                   :Else
-                      buffer⍪←type(parms.refsAreRubbish↓¨data)
+                      buffer⍪←type(parms.dropFromTitle↓¨data)
                   :EndIf
               :EndFor
               :If 0≠≢buffer

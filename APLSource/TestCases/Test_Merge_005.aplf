@@ -4,6 +4,6 @@
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
 
  buffer←¯1 ##.Compare.Merge #.Container1 #.Container2
- →T.PassesIf∧/~0∊¨⍴¨buffer
+ →T.PassesIf 0≠≢1⊃buffer
 
  R←T._OK

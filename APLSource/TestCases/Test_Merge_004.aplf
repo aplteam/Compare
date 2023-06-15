@@ -1,4 +1,4 @@
- R←Test_Merge_004(stopFlag batchFlag);⎕TRAP;rf1;rf2;∆;buffer
+ R←Test_Merge_004(stopFlag batchFlag);⎕TRAP;rf1;rf2;∆;buffer;parms
 ⍝ Exercise "Merge" with rubbish (instances and refs of all sorts) in both, [1] & [2] and "dropFromRubbish"
  ⎕TRAP←(999 'C' '. ⍝ Deliberate error')(0 'N')
  R←T._Failed
@@ -14,7 +14,10 @@
  'MyFormOK'rf2.⎕WC ∆                        ⍝ No attached code, to be reported just as Instance
 
 ⍝⍝⍝ Processing....
- buffer←¯1 ##.Compare.Merge rf1 rf2(⍴'#.Rubbish1.')
+ parms←##.Compare.CreateMergeParms
+ parms.readOnly←¯1
+ parms.dropFromTitle←≢'#.Rubbish1.'
+ buffer←parms ##.Compare.Merge rf1 rf2
  →T.GoToTidyUp 0 5≢≢¨buffer
 
  R←T._OK
