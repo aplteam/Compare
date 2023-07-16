@@ -19,5 +19,5 @@
   source: "APLSource/Compare.aplc",
   tags: "comparison-tool,merge-tool",
   userCommandScript: "",
-  version: "7.1.0+36",
+  version: "7.1.1+39",
 }

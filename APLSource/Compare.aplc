@@ -36,11 +36,13 @@
 
     ∇ r←Version
       :Access Public shared
-      r←'Compare' '7.1.0+24' '2023-03-02'
+      r←'Compare' '7.1.1+24' '2023-07-16'
     ∇
 
     ∇ History
       :Access Public Shared
+      ⍝ * 7.1.1
+      ⍝   * In case of no hits `Compare` might produce a NONCE ERROR
       ⍝ * 7.1.0
       ⍝   * Improved GUI
       ⍝   * The "Find" now has a corresponding "Next" menu item, together with a "F3" short cut
@@ -237,7 +239,12 @@
       (list1 list2)←{(0=≢⍵):'' ⋄ List ⍵}¨ref1 ref2
       :If parms.ignoreTatin
           (list1 list2)←{⍵~⊂'_tatin'}¨list1 list2
-          list1 list2←ref1 ref2{⍵/⍨((⍕⍺),'._tatin')∘≢¨⍕¨⍵}¨list1 list2
+          :If 0<≢list1
+              list1←ref1{⍵/⍨((⍕⍺),'._tatin')∘≢¨⍕¨⍵}list1
+          :EndIf
+          :If 0<≢list2
+              list2←ref2{⍵/⍨((⍕⍺),'._tatin')∘≢¨⍕¨⍵}list2
+          :EndIf
       :EndIf
       :If 1∨recursionFlag∧parms.refsAreRubbish ProcessUniqueObjects ref1 ref2 list1 list2 1 data parms
           buff←ReportRubbishIn ref1 data.report1 data.objects1 1 parms.refsAreRubbish
