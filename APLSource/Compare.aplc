@@ -35,12 +35,25 @@
     ⎕IO←1 ⋄ ⎕ML←3
 
     ∇ r←Version
-      :Access Public shared
-      r←'Compare' '7.1.1+24' '2023-07-16'
+    ⍝ Returns the version number from `TatinVars` if possible.
+    ⍝ See also `History`
+      :Access Public Shared
+      :If 0<##.⎕NC'TatinVars.CONFIG'
+          r←(⎕JSON⍠('Dialect' 'JSON5')⊢##.TatinVars.CONFIG).version
+      :Else
+    ⍝ When a script was not loaded with Tatin, there will be no namespace `TatinVars`.
+    ⍝ In such cases we cannot provide a version number, so we return just ''.
+          r←''
+      :EndIf
     ∇
 
     ∇ History
       :Access Public Shared
+      ⍝ * 8.0.0 ⋄ 2025-04-05
+      ⍝   * Syntax change: `Version` returns now a character vector with the version number according to the package config file
+      ⍝   * `Get_UUID` removed as methoed
+      ⍝   * Packages updates
+      ⍝   * `Make` improved
       ⍝ * 7.1.1
       ⍝   * In case of no hits `Compare` might produce a NONCE ERROR
       ⍝ * 7.1.0
@@ -57,21 +70,8 @@
       ⍝   * Can now ignore #._tatin / ⎕SE._tatin
       ⍝   * Bug fixes
       ⍝     `Merge` had a problem
-      ⍝ * 6.0.1
-      ⍝   * Wrong package dependency was published with 6.0.0 due to a bug in Tatin
-      ⍝ * 6.0.0
-      ⍝   * BREAKING CHANGES:
-      ⍝     Does not call any comparison tools itself anymore (not even via CompareSimple)
-      ⍝     but tries to use ⎕se.CompareFiles or prints just the filenames to ⎕SE.
       ⍝\\
       ⍝ For information regarding older versions see <https://github.com/aplteam/Compare/releases>
-    ∇
-
-    ∇ r←Get_UUID
-      :Access Public Shared
-      ⍝ Useful in order to tell this particular `Compare` class from
-      ⍝ any other classes with the same name
-      r←'{7B647151-E9A3-B54C-BAF7-7311E69DC8CC}'
     ∇
 
     ∇ {r}←{parms}Merge(ref1 ref2);obj;rubbishReport;reftoGui;data;buff
@@ -545,49 +545,6 @@
         ∇
 
     :EndClass
-
-    ∇ r←fno DisplayList(caption data info lastItemWas preSelect);∆;res;f;bool
-      r←⍬
-      'f'⎕WC'Form'('Coord' 'Pixel')('Size'(240 650))('Posn'(45 35))
-      'f.mm'⎕WC'Menubar'
-      'f.mm.cmds'⎕WC'Menu' 'Commands'
-      'f.mm.cmds.del'⎕WC'MenuItem' 'Delete change file'('Event' 'Select' 'OnDelChangeFile')
-      'f.sb'⎕WC'Statusbar'
-      'f.sb.f'⎕WC'StatusField'('Coord' 'Prop')('Size'(⍬ 98))
-      'f.sb.f'⎕WS'Text'('No of components: ',⍕⍴data)
-      f.Caption←'Compare: ',caption
-      'f.l'⎕WC'Label'info(5 5)('Attach'(4⍴'Top' 'Left'))
-      ∆←⊂'Combo'
-      ∆,←⊂'Items'({2=⍴⍴⍵:↓⎕FMT ⍵ ⋄ ⍕¨⍵}data)
-      ∆,←⊂'Posn'(35 5)
-      ∆,←⊂'Size'(⍬(f.Size[2]-5×2))
-      ∆,←⊂'Attach'('Top' 'Left' 'Top' 'Right')
-      :If ⍬≡lastItemWas
-          :If 0=≢preSelect
-              ∆,←⊂'Selitems'((-1⊃⍴data)↑1)
-          :Else
-              bool←(⍴data)⍴0
-              bool[preSelect]←1
-              ∆,←⊂'Selitems'bool
-          :EndIf
-      :Else
-          ∆,←⊂'Selitems'(lastItemWas=data)
-      :EndIf
-      'f.c'⎕WC ∆
-      'f.ok'⎕WC'Button' 'OK'((f.Size[1]-55),5)(⍬ 80)('Default' 1)('Event' 'Select' 1)('Attach'(4⍴'Bottom' 'Left'))
-      'f.cancel'⎕WC'Button' 'Cancel'(f.Size-55 85)(⍬ 80)('Cancel' 1)('Event' 'Select' 1)('Attach'(4⍴'Bottom' 'Right'))
-      ⎕NQ'f.c' 'GotFocus' ⋄ res←⎕DQ'f'
-      :If 0≠≢res
-      :AndIf 'f.ok'≡1⊃res
-          r←(f.c.SelItems⍳1)⊃{2=⍴⍴⍵:⍵[;1] ⋄ ⍵}data
-      :EndIf
-    ∇
-
-      OnDelChangeFile←{
-          0=YesOrNo'Sure you want delete the change file?':⍬
-          _←(⎕FNAMES[⍬⍴⎕FNUMS⍳fno;])⎕FERASE fno
-          f.Close
-      }
 
     ∇ bool←a Differ b;between;b1;b2
     ⍝ Ignore <tab> characters and blanks which are not enclosed by qoutes
