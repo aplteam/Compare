@@ -1,6 +1,6 @@
 {
   packageID: [
-    "aplteam-FilesAndDirs-6.0.0",
+    "aplteam-FilesAndDirs-6.0.1",
     "aplteam-CompareSimple-7.0.0",
     "aplteam-APLTreeUtils2-1.4.1",
     "aplteam-WinReg-6.0.0",
@@ -15,7 +15,7 @@
   ],
   url: [
     "https://tatin.dev/",
-    "http://localhost:444/",
+    "https://tatin.dev/",
     "https://tatin.dev/",
     "https://tatin.dev/",
     "https://tatin.dev/",

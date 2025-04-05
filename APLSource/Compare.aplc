@@ -37,9 +37,8 @@
     ∇ r←Version
     ⍝ Returns the version number from `TatinVars` if possible.
     ⍝ See also `History`
-      :If 0<⎕NC'TatinVars.CONFIG'
-          r←(⎕JSON⍠('Dialect' 'JSON5')⊢TatinVars.CONFIG).version
-      :ElseIf 0<##.⎕NC'TatinVars.CONFIG'
+      :Access Public Shared
+      :If 0<##.⎕NC'TatinVars.CONFIG'
           r←(⎕JSON⍠('Dialect' 'JSON5')⊢##.TatinVars.CONFIG).version
       :Else
     ⍝ When a script was not loaded with Tatin, there will be no namespace `TatinVars`.
@@ -50,7 +49,7 @@
 
     ∇ History
       :Access Public Shared
-      ⍝ * 8.0.0 ⋄ 2025-03-28
+      ⍝ * 8.0.0 ⋄ 2025-04-05
       ⍝   * Syntax change: `Version` returns now a character vector with the version number according to the package config file
       ⍝   * `Get_UUID` removed as methoed
       ⍝   * Packages updates
