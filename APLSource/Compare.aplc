@@ -38,7 +38,9 @@
     ⍝ Returns the version number from `TatinVars` if possible.
     ⍝ See also `History`
       :Access Public Shared
-      :If 0<##.⎕NC'TatinVars.CONFIG'
+      :If 0<⎕NC'TatinVars.CONFIG'
+          r←(⎕JSON⍠('Dialect' 'JSON5')⊢TatinVars.CONFIG).version
+      :ElseIf 0<##.⎕NC'TatinVars.CONFIG'
           r←(⎕JSON⍠('Dialect' 'JSON5')⊢##.TatinVars.CONFIG).version
       :Else
     ⍝ When a script was not loaded with Tatin, there will be no namespace `TatinVars`.
@@ -49,7 +51,9 @@
 
     ∇ History
       :Access Public Shared
-      ⍝ * 8.0.0 ⋄ 2025-04-05
+      ⍝ * 8.0.1 ⋄ 2025-05-05
+      ⍝   * "About" showed an ill-sized Form
+      ⍝ * 8.0.0 ⋄ 2025-03-28
       ⍝   * Syntax change: `Version` returns now a character vector with the version number according to the package config file
       ⍝   * `Get_UUID` removed as methoed
       ⍝   * Packages updates
@@ -1239,12 +1243,12 @@
 
         ∇ OnAbout;ff;txt;myFnt
           'myFnt'⎕WC'Font' 'APL385 Unicode'('Size' 20)
-          'ff'⎕WC'Form'(∆Caption,': About')('Coord' 'Pixel')('Posn'(75 45))('Size'(140 500))
+          'ff'⎕WC'Form'(∆Caption,': About')('Coord' 'Pixel')('Posn'(75 45))('Size'(170 600))
           'ff.e'⎕WC'Edit'('Coord' 'Prop')('Posn'(0 0))('Size'(100 100))('Style' 'Multi')('Event' 'GotFocus' 'OnGotFocus')('FontObj' 'myFnt')
           txt←''
           txt,←⊂∆Caption,' application'
           txt,←⊂''
-          txt,←⊂'Version ',⊃{⍺,' from ',⍵}/##.Version
+          txt,←⊂'Version ',##.Version
           txt,←⊂'Written by Kai Jaeger'
           txt,←⊂''
           txt,←⊂'See http://aplwiki.com/Compare'

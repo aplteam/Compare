@@ -127,10 +127,10 @@ ul li, ol li {margin: 8pt 3pt;}
 <tr><th>Executed at</th><th>APLVersion</th><th>Memory (MB)</th></tr>
 </thead>
 <tbody>
-<tr><td>2025-03-28 19:30:04</td><td>Windows-64 ⋄ 19.0.50771.0 ⋄ W ⋄ Development ⋄ Unicode</td><td>109</td></tr>
+<tr><td>2025-05-06 09:05:41</td><td>Windows-64 ⋄ 19.0.51424.0 ⋄ W ⋄ Development ⋄ Unicode</td><td>113</td></tr>
 </tbody>
 </table>
-<p>Overall 63% of the testable code is covered.</p>
+<p>Overall 64% of the testable code is covered.</p>
 <p>(Comment lines, empty lines, all <code>:End</code>* lines etc. are ignored)</p>
 <p>21 of the fns/opr are 100% covered.</p>
 <div id="partly-covered" class="keep-together">
@@ -139,13 +139,13 @@ ul li, ol li {margin: 8pt 3pt;}
 <tr><th style="text-align:left;">Function/Operator</th><th style="text-align:left;">Lines not executed</th><th style="text-align:left;">Coverage</th><th style="text-align:right;">≢</th></tr>
 </thead>
 <tbody>
-<tr class="uncovered"><td><a href="#listing_1" title="Link to listing">#.Compare.Compare.Version</a></td><td>5←≢3-6,10</td><td>0</td><td>5</td></tr>
-<tr class="uncovered"><td><a href="#listing_2" title="Link to listing">#.Compare.Compare.DisplayDiff</a></td><td>4←≢5-8</td><td>0</td><td>4</td></tr>
-<tr class="uncovered"><td><a href="#listing_3" title="Link to listing">#.Compare.Compare.Run</a></td><td>8←≢3-9,11</td><td>0</td><td>8</td></tr>
-<tr class="uncovered"><td><a href="#listing_4" title="Link to listing">#.Compare.Compare.YesOrNo</a></td><td>8←≢1-8</td><td>0</td><td>8</td></tr>
-<tr class="uncovered"><td><a href="#listing_5" title="Link to listing">#.Compare.Compare.ShowMsg</a></td><td>9←≢1-9</td><td>0</td><td>9</td></tr>
-<tr class="uncovered"><td><a href="#listing_6" title="Link to listing">#.Compare.Compare.OnContextMenu</a></td><td>52←≢1-11,13-18,20-30,32-52,54-55,57</td><td>0</td><td>52</td></tr>
-<tr class="uncovered"><td><a href="#listing_7" title="Link to listing">#.Compare.Compare.OnCompare</a></td><td>13←≢1-13</td><td>0</td><td>13</td></tr>
+<tr class="uncovered"><td><a href="#listing_1" title="Link to listing">#.Compare.Compare.DisplayDiff</a></td><td>4←≢5-8</td><td>0</td><td>4</td></tr>
+<tr class="uncovered"><td><a href="#listing_2" title="Link to listing">#.Compare.Compare.Run</a></td><td>8←≢3-9,11</td><td>0</td><td>8</td></tr>
+<tr class="uncovered"><td><a href="#listing_3" title="Link to listing">#.Compare.Compare.YesOrNo</a></td><td>8←≢1-8</td><td>0</td><td>8</td></tr>
+<tr class="uncovered"><td><a href="#listing_4" title="Link to listing">#.Compare.Compare.ShowMsg</a></td><td>9←≢1-9</td><td>0</td><td>9</td></tr>
+<tr class="uncovered"><td><a href="#listing_5" title="Link to listing">#.Compare.Compare.OnContextMenu</a></td><td>52←≢1-11,13-18,20-30,32-52,54-55,57</td><td>0</td><td>52</td></tr>
+<tr class="uncovered"><td><a href="#listing_6" title="Link to listing">#.Compare.Compare.OnCompare</a></td><td>13←≢1-13</td><td>0</td><td>13</td></tr>
+<tr><td><a href="#listing_7" title="Link to listing">#.Compare.Compare.Version</a></td><td>5, 11</td><td>60</td><td>5</td></tr>
 <tr><td><a href="#listing_8" title="Link to listing">#.Compare.Compare.RemoveRefsToTatin</a></td><td>4</td><td>75</td><td>4</td></tr>
 <tr><td><a href="#listing_9" title="Link to listing">#.Compare.Compare.ScanOrdinaryNamespacesInBothRefs</a></td><td>4←≢7-8,12-13</td><td>83</td><td>24</td></tr>
 <tr><td><a href="#listing_10" title="Link to listing">#.Compare.Compare.Merge</a></td><td>5←≢26,51,56-57,59</td><td>84</td><td>31</td></tr>
@@ -197,7 +197,7 @@ $(document).ready(function() {
         },      
         buttons: [
         {
-            text: "Partly covered (6)",
+            text: "Partly covered (7)",
             titleAttr: "50%",
             className: "active",
             action: function ( e, dt, node, config ) {
@@ -211,7 +211,7 @@ $(document).ready(function() {
             }
         },
         {
-            text: "Uncovered (7)",
+            text: "Uncovered (6)",
             titleAttr: "0%",
             className: "active",
             action: function ( e, dt, node, config ) {
@@ -270,21 +270,7 @@ $(document).ready(function() {
 } );    
 </script>
 <h2>Listings</h2>
-<code class="header" id="listing_1">#.Compare.Compare.Version &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
-<div class="code-block"><code>  r←Version</code>
-<code> [1]      ⍝ Returns the version number from `TatinVars` if possible.</code>
-<code> [2]      ⍝ See also `History`</code>
-<code class="emphasize">→[3]   :If 0&lt;⎕NC'TatinVars.CONFIG'</code>
-<code class="emphasize">→[4]       r←(⎕JSON⍠('Dialect' 'JSON5')⊢TatinVars.CONFIG).version</code>
-<code class="emphasize">→[5]   :ElseIf 0&lt;##.⎕NC'TatinVars.CONFIG'</code>
-<code class="emphasize">→[6]       r←(⎕JSON⍠('Dialect' 'JSON5')⊢##.TatinVars.CONFIG).version</code>
-<code> [7]   :Else</code>
-<code> [8]      ⍝ When a script was not loaded with Tatin, there will be no namespace `TatinVars`.</code>
-<code> [9]      ⍝ In such cases we cannot provide a version number, so we return just ''.</code>
-<code class="emphasize">→[10]      r←''</code>
-<code> [11]  :EndIf</code>
-</div>
-<code class="header" id="listing_2">#.Compare.Compare.DisplayDiff &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_1">#.Compare.Compare.DisplayDiff &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code> {r}←{n}DisplayDiff(diff readOnly versionNo data)</code>
 <code> [1]     ⍝ Designed to display the result of `Merge`.</code>
 <code> [2]     ⍝ `readOnly` supresses everything that enables a user to change anything.</code>
@@ -295,7 +281,7 @@ $(document).ready(function() {
 <code class="emphasize">→[7]  n←{0&lt;⎕NC ⍵:⍎⍵ ⋄ ⍬}'n'</code>
 <code class="emphasize">→[8]  n Display.Diff diff readOnly versionNo data</code>
 </div>
-<code class="header" id="listing_3">#.Compare.Compare.Run &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_2">#.Compare.Compare.Run &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code>  {R}←{wait}Run cmd</code>
 <code> [1]          ⍝ Starts an application</code>
 <code> [2]          ⍝ By default, Run waits for the app to quit.</code>
@@ -310,7 +296,7 @@ $(document).ready(function() {
 <code class="emphasize">→[11]      R←1('.'⎕WG'LastError')</code>
 <code> [12]  :EndTrap</code>
 </div>
-<code class="header" id="listing_4">#.Compare.Compare.YesOrNo &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_3">#.Compare.Compare.YesOrNo &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code> flag←{caption}YesOrNo question</code>
 <code class="emphasize">→[1]  caption←{0&lt;⎕NC ⍵:'Compare: ',⍎⍵ ⋄ 'Compare'}'caption'</code>
 <code class="emphasize">→[2]  ∆←⊂'MsgBox'</code>
@@ -321,7 +307,7 @@ $(document).ready(function() {
 <code class="emphasize">→[7]  'ms'⎕WC ∆</code>
 <code class="emphasize">→[8]  flag←'MsgBtn1'≡2⊃⎕DQ'ms'</code>
 </div>
-<code class="header" id="listing_5">#.Compare.Compare.ShowMsg &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_4">#.Compare.Compare.ShowMsg &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code>  {r}←{caption}ShowMsg question</code>
 <code class="emphasize">→[1]   r←⍬</code>
 <code class="emphasize">→[2]   caption←{0&lt;⎕NC ⍵:'Compare: ',⍎⍵ ⋄ 'Compare'}'caption'</code>
@@ -333,7 +319,7 @@ $(document).ready(function() {
 <code class="emphasize">→[8]   'ms'⎕WC ∆</code>
 <code class="emphasize">→[9]   {}⎕DQ'ms'</code>
 </div>
-<code class="header" id="listing_6">#.Compare.Compare.OnContextMenu &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_5">#.Compare.Compare.OnContextMenu &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code>  r←OnContextMenu msg</code>
 <code class="emphasize">→[1]   r←0</code>
 <code class="emphasize">→[2]   m←⎕NEW⊂'Menu'</code>
@@ -395,7 +381,7 @@ $(document).ready(function() {
 <code> [58]      :EndSelect</code>
 <code> [59]  :EndIf</code>
 </div>
-<code class="header" id="listing_7">#.Compare.Compare.OnCompare &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<code class="header" id="listing_6">#.Compare.Compare.OnCompare &mdash; 0%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code>  r←OnCompare msg</code>
 <code class="emphasize">→[1]   r←0</code>
 <code class="emphasize">→[2]   →(0=+/bool←f.table.Values[;4])/0  ⍝ no radio is on, so what we are supposed to do?!</code>
@@ -410,6 +396,21 @@ $(document).ready(function() {
 <code class="emphasize">→[11]  filename2←F.GetTempPath,(' '~⍨⍕⎕TS),(⍕?1000),'_',⎕AN,'.txt'</code>
 <code class="emphasize">→[12]  (⊂body)F.NPUT filename2 1</code>
 <code class="emphasize">→[13]  RunCompareIt filename1 filename2 1 title1 title2</code>
+</div>
+<code class="header" id="listing_7">#.Compare.Compare.Version &mdash; 60%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
+<div class="code-block"><code>  r←Version</code>
+<code> [1]      ⍝ Returns the version number from `TatinVars` if possible.</code>
+<code> [2]      ⍝ See also `History`</code>
+<code> [3]   :Access Public Shared</code>
+<code> [4]   :If 0&lt;⎕NC'TatinVars.CONFIG'</code>
+<code class="emphasize">→[5]       r←(⎕JSON⍠('Dialect' 'JSON5')⊢TatinVars.CONFIG).version</code>
+<code> [6]   :ElseIf 0&lt;##.⎕NC'TatinVars.CONFIG'</code>
+<code> [7]       r←(⎕JSON⍠('Dialect' 'JSON5')⊢##.TatinVars.CONFIG).version</code>
+<code> [8]   :Else</code>
+<code> [9]      ⍝ When a script was not loaded with Tatin, there will be no namespace `TatinVars`.</code>
+<code> [10]     ⍝ In such cases we cannot provide a version number, so we return just ''.</code>
+<code class="emphasize">→[11]      r←''</code>
+<code> [12]  :EndIf</code>
 </div>
 <code class="header" id="listing_8">#.Compare.Compare.RemoveRefsToTatin &mdash; 75%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code> list←RemoveRefsToTatin(ref list)</code>
@@ -641,29 +642,31 @@ $(document).ready(function() {
 <code class="header" id="listing_20">#.Compare.Compare.History &mdash; 100%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code>  History</code>
 <code> [1]   :Access Public Shared</code>
-<code> [2]        ⍝ * 8.0.0 ⋄ 2025-03-28</code>
-<code> [3]        ⍝   * Syntax change: `Version` returns now a character vector with the version number according to the package config file</code>
-<code> [4]        ⍝   * `Get_UUID` removed as methoed</code>
-<code> [5]        ⍝   * Packages updates</code>
-<code> [6]        ⍝   * `Make` improved</code>
-<code> [7]        ⍝ * 7.1.1</code>
-<code> [8]        ⍝   * In case of no hits `Compare` might produce a NONCE ERROR</code>
-<code> [9]        ⍝ * 7.1.0</code>
-<code> [10]       ⍝   * Improved GUI</code>
-<code> [11]       ⍝   * The "Find" now has a corresponding "Next" menu item, together with a "F3" short cut</code>
-<code> [12]       ⍝   * Rubbish report was buggy</code>
-<code> [13]       ⍝ * 7.0.0</code>
-<code> [14]       ⍝   * BREAKING CHANGE: `Merge` returns always a two-item vector, and `readOnly←¯2`</code>
-<code> [15]       ⍝     is not valid anymore though it is simply ignored when specified.</code>
-<code> [16]       ⍝   * BREAKING CHANGE: `Merge` now requires a parameter space as optional left</code>
-<code> [17]       ⍝     argument. Specifying one or two integers as `⍺` is now deprecated theough</code>
-<code> [18]       ⍝     still supported for the time bing.</code>
-<code> [19]       ⍝   * There is now a function `CreateMergeParms`</code>
-<code> [20]       ⍝   * Can now ignore #._tatin / ⎕SE._tatin</code>
-<code> [21]       ⍝   * Bug fixes</code>
-<code> [22]       ⍝     `Merge` had a problem</code>
-<code> [23]       ⍝\\</code>
-<code> [24]       ⍝ For information regarding older versions see &lt;https://github.com/aplteam/Compare/releases&gt;</code>
+<code> [2]        ⍝ * 8.0.1 ⋄ 2025-05-05</code>
+<code> [3]        ⍝   * "About" showed an ill-sized Form</code>
+<code> [4]        ⍝ * 8.0.0 ⋄ 2025-03-28</code>
+<code> [5]        ⍝   * Syntax change: `Version` returns now a character vector with the version number according to the package config file</code>
+<code> [6]        ⍝   * `Get_UUID` removed as methoed</code>
+<code> [7]        ⍝   * Packages updates</code>
+<code> [8]        ⍝   * `Make` improved</code>
+<code> [9]        ⍝ * 7.1.1</code>
+<code> [10]       ⍝   * In case of no hits `Compare` might produce a NONCE ERROR</code>
+<code> [11]       ⍝ * 7.1.0</code>
+<code> [12]       ⍝   * Improved GUI</code>
+<code> [13]       ⍝   * The "Find" now has a corresponding "Next" menu item, together with a "F3" short cut</code>
+<code> [14]       ⍝   * Rubbish report was buggy</code>
+<code> [15]       ⍝ * 7.0.0</code>
+<code> [16]       ⍝   * BREAKING CHANGE: `Merge` returns always a two-item vector, and `readOnly←¯2`</code>
+<code> [17]       ⍝     is not valid anymore though it is simply ignored when specified.</code>
+<code> [18]       ⍝   * BREAKING CHANGE: `Merge` now requires a parameter space as optional left</code>
+<code> [19]       ⍝     argument. Specifying one or two integers as `⍺` is now deprecated theough</code>
+<code> [20]       ⍝     still supported for the time bing.</code>
+<code> [21]       ⍝   * There is now a function `CreateMergeParms`</code>
+<code> [22]       ⍝   * Can now ignore #._tatin / ⎕SE._tatin</code>
+<code> [23]       ⍝   * Bug fixes</code>
+<code> [24]       ⍝     `Merge` had a problem</code>
+<code> [25]       ⍝\\</code>
+<code> [26]       ⍝ For information regarding older versions see &lt;https://github.com/aplteam/Compare/releases&gt;</code>
 </div>
 <code class="header" id="listing_21">#.Compare.Compare.CreateMergeParms &mdash; 100%<a class="float-right no-print no-underline top-links" href="#top" title="Go to the top of the document">&#8607;</a><a  class="float-right no-print no-underline top-links" href="#partly-covered" title="Go to the beginning of 'Partly-covered'">↑</a></code>
 <div class="code-block"><code> r←CreateMergeParms</code>
