@@ -50,7 +50,9 @@
     ∇
 
     ∇ History
-      :Access Public Shared
+      :Access Public Shared 
+      ⍝ * 8.1.0 ⋄ 2025-05-06
+      ⍝   * Packages updated
       ⍝ * 8.0.1 ⋄ 2025-05-05
       ⍝   * "About" showed an ill-sized Form
       ⍝ * 8.0.0 ⋄ 2025-03-28
